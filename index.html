@@ -1,0 +1,2433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FOOTBALL RUSH 100 — 3D Stadium Runner</title>
+    <!-- Tailwind CSS for responsive layout helpers -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js for 3D rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Google Fonts: Outfit & Rajdhani for sporty modern gaming typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-glow: rgba(16, 185, 129, 0.5);
+            --accent: #f59e0b;
+            --accent-glow: rgba(245, 158, 11, 0.5);
+            --bg-dark: #070b14;
+            --glass-bg: rgba(15, 23, 42, 0.72);
+            --glass-border: rgba(255, 255, 255, 0.14);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-dark);
+            color: #f8fafc;
+        }
+
+        /* 3D Canvas fills entire viewport */
+        #game-canvas-container {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.65);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.28);
+            background: rgba(30, 41, 59, 0.85);
+        }
+
+        /* Glowing Gaming Buttons */
+        .btn-glow-green {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            box-shadow: 0 6px 24px rgba(16, 185, 129, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+            transition: all 0.2s ease;
+        }
+        .btn-glow-green:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 10px 30px rgba(16, 185, 129, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+        .btn-glow-green:active {
+            transform: translateY(1px) scale(0.98);
+        }
+
+        .btn-glow-gold {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+            transition: all 0.2s ease;
+        }
+        .btn-glow-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 26px rgba(245, 158, 11, 0.6);
+        }
+
+        .btn-glow-blue {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+            transition: all 0.2s ease;
+        }
+        .btn-glow-blue:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 26px rgba(59, 130, 246, 0.6);
+        }
+
+        .font-sport {
+            font-family: 'Rajdhani', sans-serif;
+            letter-spacing: 0.04em;
+        }
+
+        /* Custom Scrollbar for Level Map & Shop */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 999px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.4);
+            border-radius: 999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(148, 163, 184, 0.7);
+        }
+
+        /* Pulse animation for milestone badges & active buttons */
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-float {
+            animation: floatSlow 3s ease-in-out infinite;
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-pop {
+            animation: popIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Age-theme accents */
+        body.theme-junior {
+            --primary: #22c55e;
+            --accent: #facc15;
+        }
+        body.theme-rising {
+            --primary: #06b6d4;
+            --accent: #f59e0b;
+        }
+        body.theme-pro {
+            --primary: #8b5cf6;
+            --accent: #ec4899;
+        }
+        body.theme-legends {
+            --primary: #f59e0b;
+            --accent: #ef4444;
+        }
+
+        /* On-screen touch/click control pads */
+        .control-pad-btn {
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 255, 255, 0.22);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            transition: transform 0.1s ease, background 0.15s ease;
+        }
+        .control-pad-btn:active {
+            transform: scale(0.9);
+            background: rgba(16, 185, 129, 0.55);
+            border-color: #10b981;
+        }
+    </style>
+</head>
+<body class="theme-rising">
+
+    <!-- 3D Three.js World Container -->
+    <div id="game-canvas-container"></div>
+
+    <!-- Floating Toast Notification Container (Replaces alert()) -->
+    <div id="toast-container" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none w-11/12 max-w-md"></div>
+
+    <!-- TOP PERSISTENT NAVIGATION & ECONOMY HEADER -->
+    <header id="top-bar" class="fixed top-0 left-0 right-0 z-30 p-2 sm:p-3 pointer-events-none">
+        <div class="max-w-7xl mx-auto glass-panel rounded-2xl px-3 py-2 sm:px-5 sm:py-2.5 flex flex-wrap items-center justify-between gap-2 pointer-events-auto">
+            
+            <!-- Left: Brand & Player Profile Pill -->
+            <div class="flex items-center gap-2.5">
+                <button onclick="UI.navigate('home')" class="flex items-center gap-2 text-left group">
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-xl shadow-lg group-hover:scale-105 transition">
+                        ⚽
+                    </div>
+                    <div class="hidden sm:block">
+                        <div class="font-black text-sm sm:text-base tracking-wider leading-none text-white">FOOTBALL RUSH <span class="text-emerald-400">100</span></div>
+                        <div id="header-age-label" class="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider mt-0.5">Rising Stars (9–12)</div>
+                    </div>
+                </button>
+
+                <!-- Profile Button -->
+                <button onclick="UI.openModal('profile-modal')" class="ml-1 sm:ml-2 px-2.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-white/10 flex items-center gap-2 transition">
+                    <span id="header-avatar" class="text-base">🏃</span>
+                    <div class="text-left">
+                        <div id="header-nickname" class="text-xs font-bold text-white leading-none max-w-[90px] truncate">Striker01</div>
+                        <div class="text-[10px] text-slate-400 leading-none mt-0.5">Best: <span id="header-best-score" class="text-emerald-400 font-bold">0</span></div>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Center: Quick Nav Tabs (Hidden during active gameplay) -->
+            <nav id="main-nav-tabs" class="flex items-center gap-1 sm:gap-1.5 bg-slate-900/70 p-1 rounded-xl border border-white/10 order-3 md:order-2 w-full md:w-auto justify-around">
+                <button onclick="UI.navigate('home')" data-tab="home" class="nav-tab-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <span>🏟️</span><span>Lobby</span>
+                </button>
+                <button onclick="UI.navigate('map')" data-tab="map" class="nav-tab-btn px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <span>🗺️</span><span>100 Levels</span>
+                </button>
+                <button onclick="UI.navigate('shop')" data-tab="shop" class="nav-tab-btn px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1">
+                    <span>👕</span><span>Squad Shop</span>
+                </button>
+                <button onclick="UI.navigate('rewards')" data-tab="rewards" class="nav-tab-btn px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1 relative">
+                    <span>🏆</span><span>Rewards</span>
+                    <span id="reward-dot" class="hidden w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                </button>
+                <button onclick="UI.openModal('settings-modal')" class="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1" title="Settings & Safety">
+                    <span>⚙️</span><span class="hidden sm:inline">Guide</span>
+                </button>
+            </nav>
+
+            <!-- Right: Coins & Daily Gift -->
+            <div class="flex items-center gap-2 order-2 md:order-3">
+                <button onclick="UI.openDailyReward()" id="daily-btn" class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-300 text-xs font-bold flex items-center gap-1 transition">
+                    <span>🎁</span><span class="hidden sm:inline">Daily</span>
+                </button>
+                <div class="px-3 py-1.5 rounded-xl bg-slate-900/90 border border-amber-400/30 flex items-center gap-1.5 shadow-inner">
+                    <span class="text-base">🪙</span>
+                    <span id="header-coins" class="font-sport font-bold text-base sm:text-lg text-amber-400">250</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN UI OVERLAYS (LOBBY, LEVEL MAP, SHOP, REWARDS) -->
+    <main id="menu-screens" class="fixed inset-0 z-20 pt-28 md:pt-20 pb-4 px-3 sm:px-6 overflow-y-auto flex flex-col items-center">
+        
+        <!-- 1. HOME / LOBBY SCREEN -->
+        <section id="screen-home" class="w-full max-w-5xl my-auto flex flex-col gap-4 animate-pop">
+            
+            <!-- Hero Title & Play Card -->
+            <div class="glass-panel rounded-3xl p-5 sm:p-8 flex flex-col lg:flex-row items-center justify-between gap-6">
+                <div class="text-center lg:text-left max-w-xl">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-3">
+                        <span id="lobby-stadium-badge">🏟️ Grass Football Stadium</span>
+                        <span>•</span>
+                        <span id="lobby-level-badge">Level 1 / 100</span>
+                    </div>
+                    <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
+                        DASH TO <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300">CHAMPION GLORY</span>
+                    </h1>
+                    <p id="lobby-age-desc" class="text-slate-300 text-sm sm:text-base mt-2">
+                        Dribble past defenders, leap over hurdles, and conquer 100 stadium levels across 10 iconic football arenas!
+                    </p>
+
+                    <!-- Primary Action Buttons -->
+                    <div class="mt-5 flex flex-wrap items-center justify-center lg:justify-start gap-3">
+                        <button onclick="Game.startLevel(State.getCurrentLevel())" class="btn-glow-green px-7 py-3.5 rounded-2xl font-black text-base sm:text-lg text-white flex items-center gap-2.5 cursor-pointer">
+                            <span>▶</span>
+                            <span>PLAY LEVEL <span id="play-btn-lvl">1</span></span>
+                        </button>
+                        <button onclick="UI.navigate('map')" class="glass-card px-5 py-3.5 rounded-2xl font-bold text-sm sm:text-base text-white flex items-center gap-2 cursor-pointer">
+                            <span>🗺️</span>
+                            <span>SELECT LEVEL</span>
+                        </button>
+                        <button onclick="UI.openModal('tutorial-modal')" class="glass-card px-4 py-3.5 rounded-2xl font-bold text-sm text-cyan-300 flex items-center gap-1.5 cursor-pointer">
+                            <span>❓</span>
+                            <span>HOW TO PLAY</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Current Progress & Champion Trophy Card -->
+                <div class="w-full lg:w-80 glass-card rounded-2xl p-4 flex flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Mode Progress</span>
+                        <span id="lobby-trophy-status" class="text-xs font-bold text-amber-400">🏆 0/100 Cleared</span>
+                    </div>
+                    <!-- Progress Bar -->
+                    <div class="w-full h-3 bg-slate-900 rounded-full overflow-hidden border border-white/10">
+                        <div id="lobby-progress-bar" class="h-full bg-gradient-to-r from-emerald-400 to-amber-400 transition-all duration-500" style="width: 1%;"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-center mt-1">
+                        <div class="bg-slate-900/60 rounded-xl p-2 border border-white/5">
+                            <div class="text-[11px] text-slate-400">Equipped Star</div>
+                            <div id="lobby-equipped-name" class="text-xs font-bold text-white truncate mt-0.5">Rookie Leo</div>
+                        </div>
+                        <div class="bg-slate-900/60 rounded-xl p-2 border border-white/5">
+                            <div class="text-[11px] text-slate-400">Next Milestone</div>
+                            <div id="lobby-next-milestone" class="text-xs font-bold text-amber-400 mt-0.5">Lvl 10 (+500 🪙)</div>
+                        </div>
+                    </div>
+                    <!-- Quick Stadium Theme Preview Selector -->
+                    <div class="pt-1 border-t border-white/10 flex items-center justify-between">
+                        <span class="text-[11px] text-slate-400 font-semibold">Preview Arena:</span>
+                        <select id="lobby-arena-preview" onchange="Game.previewEnvironment(parseInt(this.value))" class="bg-slate-900 text-xs font-bold text-emerald-300 rounded-lg px-2 py-1 border border-white/15 outline-none">
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FOUR AGE MODES SELECTOR -->
+            <div class="glass-panel rounded-3xl p-4 sm:p-6">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <div>
+                        <h2 class="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
+                            <span>🎯</span><span>SELECT AGE DIVISION (INDEPENDENT 100 LEVELS EACH)</span>
+                        </h2>
+                        <p class="text-xs text-slate-400">Tailored speed, obstacle spacing, and age-appropriate safety for every player.</p>
+                    </div>
+                    <span class="text-[11px] px-2.5 py-1 rounded-full bg-sky-500/15 text-sky-300 border border-sky-400/30 font-semibold">
+                        🛡️ Kid-Safe • 100% Free Fictional Coins
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" id="age-modes-grid">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. 100-LEVEL INTERACTIVE MAP SCREEN -->
+        <section id="screen-map" class="hidden w-full max-w-6xl glass-panel rounded-3xl p-4 sm:p-6 flex flex-col gap-4 animate-pop">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                        <span>🗺️</span><span>100-LEVEL STADIUM JOURNEY</span>
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-300">
+                        Active Division: <span id="map-age-title" class="font-bold text-emerald-400">Rising Stars</span> • Milestone Bonuses at 10, 20, 30, 50, 75 & 100!
+                    </p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div id="champion-trophy-pill" class="px-3 py-1.5 rounded-xl bg-slate-900/80 border border-amber-400/30 text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                        <span>🏆</span><span>Champion Trophy: Locked</span>
+                    </div>
+                    <button onclick="UI.navigate('home')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white border border-white/10">
+                        ← Back
+                    </button>
+                </div>
+            </div>
+
+            <!-- Environment Zone Filter Tabs -->
+            <div id="env-filter-bar" class="flex items-center gap-1.5 overflow-x-auto pb-1">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- 100 Levels Grid -->
+            <div id="levels-grid" class="grid grid-cols-5 sm:grid-cols-10 gap-2 sm:gap-2.5 max-h-[56vh] overflow-y-auto pr-1">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- 3. CHARACTER COLLECTION & SHOP SCREEN -->
+        <section id="screen-shop" class="hidden w-full max-w-6xl glass-panel rounded-3xl p-4 sm:p-6 flex flex-col gap-4 animate-pop">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                        <span>👕</span><span>SQUAD LOCKER & CHARACTER SHOP</span>
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-300">Unlock football stars using coins earned on the pitch. Every player has unique perks!</p>
+                </div>
+                <button onclick="UI.navigate('home')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white border border-white/10">
+                    ← Back
+                </button>
+            </div>
+
+            <div id="shop-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[62vh] overflow-y-auto pr-1">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+
+        <!-- 4. ACHIEVEMENTS, CHALLENGES & TROPHIES SCREEN -->
+        <section id="screen-rewards" class="hidden w-full max-w-6xl glass-panel rounded-3xl p-4 sm:p-6 flex flex-col gap-4 animate-pop">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                <div>
+                    <h2 class="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                        <span>🏆</span><span>TROPHIES, DAILY CHALLENGES & ACHIEVEMENTS</span>
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-300">Complete daily missions and career milestones for huge coin payouts.</p>
+                </div>
+                <button onclick="UI.navigate('home')" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white border border-white/10">
+                    ← Back
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[62vh] overflow-y-auto pr-1">
+                <!-- Daily Challenges Column -->
+                <div class="glass-card rounded-2xl p-4 flex flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-extrabold text-base text-amber-300 flex items-center gap-2"><span>⚡</span><span>DAILY CHALLENGES</span></h3>
+                        <span class="text-[11px] text-slate-400">Resets Daily</span>
+                    </div>
+                    <div id="daily-challenges-list" class="flex flex-col gap-2.5"></div>
+                </div>
+
+                <!-- Career Achievements & Milestones Column -->
+                <div class="glass-card rounded-2xl p-4 flex flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-extrabold text-base text-emerald-300 flex items-center gap-2"><span>🎖️</span><span>CAREER ACHIEVEMENTS</span></h3>
+                        <span id="achievements-count" class="text-[11px] text-slate-400">0/8 Unlocked</span>
+                    </div>
+                    <div id="achievements-list" class="flex flex-col gap-2.5"></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- IN-GAME HEADS-UP DISPLAY (HUD) -->
+    <div id="game-hud" class="hidden fixed inset-0 z-20 pointer-events-none flex flex-col justify-between p-3 sm:p-5">
+        
+        <!-- Top HUD Bar -->
+        <div class="mt-14 sm:mt-16 max-w-5xl w-full mx-auto flex flex-wrap items-center justify-between gap-2">
+            <!-- Level & Progress Pill -->
+            <div class="glass-panel rounded-2xl px-3.5 py-2 flex items-center gap-3 pointer-events-auto">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-black uppercase text-emerald-400">LVL <span id="hud-level">1</span></span>
+                        <span class="text-slate-500">•</span>
+                        <span id="hud-env-name" class="text-xs font-bold text-white truncate max-w-[140px]">Grass Stadium</span>
+                    </div>
+                    <div class="w-32 sm:w-44 h-2 bg-slate-900 rounded-full overflow-hidden mt-1 border border-white/10">
+                        <div id="hud-progress-fill" class="h-full bg-gradient-to-r from-emerald-400 to-amber-400 transition-all duration-100" style="width: 0%;"></div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-[10px] text-slate-400 uppercase font-bold">Distance</div>
+                    <div class="font-sport font-bold text-sm sm:text-base text-white"><span id="hud-dist">0</span>/<span id="hud-target">300</span>m</div>
+                </div>
+            </div>
+
+            <!-- Live Score, Run Coins & Active Powerup -->
+            <div class="flex items-center gap-2 pointer-events-auto">
+                <div id="hud-shield-badge" class="hidden px-2.5 py-1.5 rounded-xl bg-sky-500/30 border border-sky-400 text-sky-200 text-xs font-bold">
+                    🛡️ Shield Active
+                </div>
+                <div id="hud-magnet-badge" class="hidden px-2.5 py-1.5 rounded-xl bg-purple-500/30 border border-purple-400 text-purple-200 text-xs font-bold">
+                    🧲 Magnet
+                </div>
+                <div class="glass-panel rounded-2xl px-3 py-1.5 text-center">
+                    <div class="text-[10px] text-slate-400 font-bold uppercase">Run Coins</div>
+                    <div class="font-sport font-bold text-base text-amber-400">+<span id="hud-run-coins">0</span> 🪙</div>
+                </div>
+                <div class="glass-panel rounded-2xl px-3 py-1.5 text-center">
+                    <div class="text-[10px] text-slate-400 font-bold uppercase">Score</div>
+                    <div id="hud-score" class="font-sport font-bold text-base text-white">0</div>
+                </div>
+                <button onclick="Game.togglePause()" class="glass-panel w-10 h-10 rounded-xl flex items-center justify-center text-white hover:bg-slate-800 transition cursor-pointer" title="Pause">
+                    ⏸️
+                </button>
+            </div>
+        </div>
+
+        <!-- Bottom Touch / Click Control Buttons (Always accessible on Desktop & Mobile) -->
+        <div class="max-w-lg w-full mx-auto flex items-center justify-between gap-2 pb-2 pointer-events-auto">
+            <button onpointerdown="Game.handleInput('left')" class="control-pad-btn flex-1 py-3.5 sm:py-4 rounded-2xl flex flex-col items-center justify-center text-white cursor-pointer">
+                <span class="text-xl sm:text-2xl leading-none">⬅️</span>
+                <span class="text-[10px] font-bold text-slate-300 mt-1">LEFT (A)</span>
+            </button>
+            <button onpointerdown="Game.handleInput('jump')" class="control-pad-btn flex-1 py-3.5 sm:py-4 rounded-2xl flex flex-col items-center justify-center text-white cursor-pointer">
+                <span class="text-xl sm:text-2xl leading-none">⬆️</span>
+                <span class="text-[10px] font-bold text-emerald-300 mt-1">JUMP (SPACE)</span>
+            </button>
+            <button onpointerdown="Game.handleInput('slide')" class="control-pad-btn flex-1 py-3.5 sm:py-4 rounded-2xl flex flex-col items-center justify-center text-white cursor-pointer">
+                <span class="text-xl sm:text-2xl leading-none">⬇️</span>
+                <span class="text-[10px] font-bold text-amber-300 mt-1">SLIDE (S)</span>
+            </button>
+            <button onpointerdown="Game.handleInput('right')" class="control-pad-btn flex-1 py-3.5 sm:py-4 rounded-2xl flex flex-col items-center justify-center text-white cursor-pointer">
+                <span class="text-xl sm:text-2xl leading-none">➡️</span>
+                <span class="text-[10px] font-bold text-slate-300 mt-1">RIGHT (D)</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- MODALS OVERLAY -->
+    <div id="modal-backdrop" class="hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        
+        <!-- PAUSE MODAL -->
+        <div id="pause-modal" class="hidden glass-panel rounded-3xl p-6 max-w-sm w-full text-center animate-pop">
+            <div class="text-4xl mb-2">⏸️</div>
+            <h3 class="text-2xl font-black text-white">GAME PAUSED</h3>
+            <p class="text-xs text-slate-300 mt-1">Take a breather on the sidelines.</p>
+            <div class="mt-5 flex flex-col gap-2.5">
+                <button onclick="Game.togglePause()" class="btn-glow-green w-full py-3 rounded-xl font-black text-white">▶ RESUME MATCH</button>
+                <button onclick="Game.restartLevel()" class="btn-glow-blue w-full py-3 rounded-xl font-bold text-white">🔄 RESTART LEVEL</button>
+                <button onclick="Game.quitToMenu()" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold text-slate-200 border border-white/10">🏠 EXIT TO LOBBY</button>
+            </div>
+        </div>
+
+        <!-- LEVEL COMPLETE MODAL -->
+        <div id="win-modal" class="hidden glass-panel rounded-3xl p-6 max-w-md w-full text-center animate-pop">
+            <div id="win-icon" class="text-5xl mb-2 animate-float">🏆</div>
+            <div class="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-extrabold uppercase tracking-wider">
+                Level <span id="win-level-num">1</span> Cleared!
+            </div>
+            <h3 id="win-title" class="text-2xl sm:text-3xl font-black text-white mt-1">GOAL! VICTORY!</h3>
+            <p id="win-subtitle" class="text-xs sm:text-sm text-slate-300 mt-1">Spectacular run through the stadium!</p>
+
+            <!-- Rewards Breakdown -->
+            <div class="mt-4 bg-slate-900/75 rounded-2xl p-4 border border-white/10 flex flex-col gap-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Coins Collected on Pitch:</span>
+                    <span class="font-bold text-amber-400">+<span id="win-run-coins">0</span> 🪙</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400">Level Completion Bonus:</span>
+                    <span class="font-bold text-emerald-400">+<span id="win-bonus-coins">50</span> 🪙</span>
+                </div>
+                <div id="win-milestone-row" class="hidden flex justify-between border-t border-white/10 pt-2 text-amber-300 font-extrabold">
+                    <span>🌟 Milestone Reward:</span>
+                    <span>+<span id="win-milestone-coins">500</span> 🪙</span>
+                </div>
+                <div class="flex justify-between border-t border-white/10 pt-2 text-base font-black">
+                    <span class="text-white">Total Earned:</span>
+                    <span class="text-amber-400">+<span id="win-total-coins">50</span> 🪙</span>
+                </div>
+            </div>
+
+            <div class="mt-5 flex flex-col sm:flex-row gap-2.5">
+                <button id="win-next-btn" onclick="Game.nextLevel()" class="btn-glow-green flex-1 py-3.5 rounded-xl font-black text-white">
+                    NEXT LEVEL ➔
+                </button>
+                <button onclick="Game.quitToMenu()" class="px-5 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold text-slate-200 border border-white/10">
+                    LOBBY
+                </button>
+            </div>
+        </div>
+
+        <!-- GAME OVER / TACKLED MODAL -->
+        <div id="gameover-modal" class="hidden glass-panel rounded-3xl p-6 max-w-md w-full text-center animate-pop">
+            <div class="text-5xl mb-2">🥅</div>
+            <div class="inline-block px-3 py-1 rounded-full bg-rose-500/20 text-rose-300 text-xs font-extrabold uppercase tracking-wider">
+                Tackled at <span id="go-dist">0</span>m / <span id="go-target">300</span>m
+            </div>
+            <h3 class="text-2xl sm:text-3xl font-black text-white mt-1">FOUL! TRY AGAIN!</h3>
+            <p class="text-xs sm:text-sm text-slate-300 mt-1">You kept all the coins you picked up during your run!</p>
+
+            <div class="mt-4 bg-slate-900/75 rounded-2xl p-4 border border-white/10 flex justify-around text-center">
+                <div>
+                    <div class="text-xs text-slate-400">Run Score</div>
+                    <div id="go-score" class="font-sport font-bold text-xl text-white">0</div>
+                </div>
+                <div class="w-px bg-white/10"></div>
+                <div>
+                    <div class="text-xs text-slate-400">Coins Kept</div>
+                    <div class="font-sport font-bold text-xl text-amber-400">+<span id="go-coins">0</span> 🪙</div>
+                </div>
+            </div>
+
+            <div class="mt-5 flex flex-col sm:flex-row gap-2.5">
+                <button onclick="Game.restartLevel()" class="btn-glow-green flex-1 py-3.5 rounded-xl font-black text-white">
+                    🔄 PLAY AGAIN
+                </button>
+                <button onclick="Game.quitToMenu()" class="px-5 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold text-slate-200 border border-white/10">
+                    LOBBY
+                </button>
+            </div>
+        </div>
+
+        <!-- PLAYER PROFILE MODAL -->
+        <div id="profile-modal" class="hidden glass-panel rounded-3xl p-6 max-w-md w-full animate-pop">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-black text-white flex items-center gap-2"><span>🪪</span><span>PLAYER PROFILE</span></h3>
+                <button onclick="UI.closeModals()" class="text-slate-400 hover:text-white text-xl">✕</button>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label class="text-xs font-bold text-slate-300 uppercase">Player Nickname</label>
+                    <input id="profile-nickname-input" type="text" maxlength="16" placeholder="Enter nickname..." class="mt-1 w-full bg-slate-900/90 border border-white/15 rounded-xl px-3.5 py-2.5 text-white font-bold outline-none focus:border-emerald-400">
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-slate-300 uppercase">Choose Avatar Badge</label>
+                    <div id="avatar-picker" class="grid grid-cols-6 gap-2 mt-1.5">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/70 rounded-2xl p-3.5 border border-white/10 grid grid-cols-3 gap-2 text-center">
+                    <div>
+                        <div class="text-[10px] text-slate-400 uppercase">Total Coins</div>
+                        <div id="prof-stat-coins" class="font-sport font-bold text-base text-amber-400">0</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-slate-400 uppercase">Total Cleared</div>
+                        <div id="prof-stat-levels" class="font-sport font-bold text-base text-emerald-400">0/400</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-slate-400 uppercase">Best Score</div>
+                        <div id="prof-stat-best" class="font-sport font-bold text-base text-cyan-400">0</div>
+                    </div>
+                </div>
+
+                <button onclick="UI.saveProfile()" class="btn-glow-green w-full py-3 rounded-xl font-black text-white">
+                    SAVE PROFILE
+                </button>
+            </div>
+        </div>
+
+        <!-- SETTINGS, PARENTAL GUIDE & TUTORIAL MODAL -->
+        <div id="settings-modal" class="hidden glass-panel rounded-3xl p-6 max-w-lg w-full animate-pop max-h-[88vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-black text-white flex items-center gap-2"><span>⚙️</span><span>SETTINGS & PARENTAL GUIDE</span></h3>
+                <button onclick="UI.closeModals()" class="text-slate-400 hover:text-white text-xl">✕</button>
+            </div>
+
+            <div class="flex flex-col gap-4">
+                <!-- Sound & Graphics Toggles -->
+                <div class="glass-card rounded-2xl p-4 flex flex-col gap-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <div class="font-bold text-sm text-white">🔊 Stadium Sound Effects</div>
+                            <div class="text-xs text-slate-400">Whistles, coin chimes, jump & cheer synth audio</div>
+                        </div>
+                        <button id="toggle-sound-btn" onclick="Settings.toggleSound()" class="px-4 py-1.5 rounded-xl font-bold text-xs bg-emerald-500 text-white">ON</button>
+                    </div>
+                    <div class="flex items-center justify-between border-t border-white/10 pt-3">
+                        <div>
+                            <div class="font-bold text-sm text-white">✨ 3D Graphics Quality</div>
+                            <div class="text-xs text-slate-400">High enables dynamic particles & stadium lights</div>
+                        </div>
+                        <button id="toggle-gfx-btn" onclick="Settings.toggleGraphics()" class="px-4 py-1.5 rounded-xl font-bold text-xs bg-blue-500 text-white">HIGH</button>
+                    </div>
+                </div>
+
+                <!-- Parental Guidance & Privacy Notice -->
+                <div class="bg-sky-950/50 border border-sky-400/30 rounded-2xl p-4">
+                    <h4 class="font-extrabold text-sm text-sky-300 flex items-center gap-1.5">
+                        <span>🛡️</span><span>PARENTAL GUIDANCE & CHILD PRIVACY DESIGN</span>
+                    </h4>
+                    <ul class="text-xs text-slate-300 mt-2 space-y-1.5 list-disc pl-4">
+                        <li><strong>Zero Real-Money Purchases:</strong> All coins, characters, and stadium unlocks are 100% fictional and earned purely through gameplay.</li>
+                        <li><strong>Privacy-First Local Storage:</strong> Progress and nicknames stay strictly on this device's browser storage. No personal data is collected or transmitted.</li>
+                        <li><strong>Age-Calibrated Pacing:</strong> <em>Junior Kickers (5–8)</em> provides wider obstacle spacing, gentle speed, and encouraging positive feedback.</li>
+                    </ul>
+                </div>
+
+                <div class="flex gap-2">
+                    <button onclick="UI.closeModals(); UI.openModal('tutorial-modal')" class="btn-glow-blue flex-1 py-2.5 rounded-xl font-bold text-xs text-white">
+                        📖 VIEW TUTORIAL
+                    </button>
+                    <button onclick="UI.closeModals()" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold text-xs text-white border border-white/10">
+                        DONE
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- INTERACTIVE TUTORIAL MODAL -->
+        <div id="tutorial-modal" class="hidden glass-panel rounded-3xl p-6 max-w-md w-full animate-pop text-center">
+            <div class="text-4xl mb-2">⚽</div>
+            <h3 class="text-2xl font-black text-white">HOW TO PLAY</h3>
+            <p class="text-xs text-slate-300 mt-1">Master the pitch controls to reach Level 100!</p>
+
+            <div class="mt-4 grid grid-cols-2 gap-2.5 text-left text-xs">
+                <div class="bg-slate-900/75 p-3 rounded-2xl border border-white/10">
+                    <div class="text-lg mb-1">⬅️ ➡️</div>
+                    <div class="font-bold text-white">Switch Lanes</div>
+                    <div class="text-slate-400 mt-0.5">Press <strong>A / D</strong>, <strong>Left / Right</strong> arrows, swipe, or tap buttons.</div>
+                </div>
+                <div class="bg-slate-900/75 p-3 rounded-2xl border border-white/10">
+                    <div class="text-lg mb-1">⬆️</div>
+                    <div class="font-bold text-emerald-300">Jump Hurdles</div>
+                    <div class="text-slate-400 mt-0.5">Press <strong>Space / W / Up</strong> or swipe up to leap over low barriers & cones.</div>
+                </div>
+                <div class="bg-slate-900/75 p-3 rounded-2xl border border-white/10">
+                    <div class="text-lg mb-1">⬇️</div>
+                    <div class="font-bold text-amber-300">Slide Under</div>
+                    <div class="text-slate-400 mt-0.5">Press <strong>S / Down</strong> or swipe down to duck under high goal crossbars.</div>
+                </div>
+                <div class="bg-slate-900/75 p-3 rounded-2xl border border-white/10">
+                    <div class="text-lg mb-1">🪙 🧲 🛡️</div>
+                    <div class="font-bold text-cyan-300">Coins & Powerups</div>
+                    <div class="text-slate-400 mt-0.5">Grab golden coins for the Squad Shop, Magnets to pull coins, and Shields!</div>
+                </div>
+            </div>
+
+            <button onclick="UI.completeTutorial()" class="btn-glow-green w-full mt-5 py-3.5 rounded-xl font-black text-white">
+                GOT IT, LET'S KICK OFF! ⚽
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+    /**
+     * ============================================================================
+     * FOOTBALL RUSH 100 — COMPLETE GAME ENGINE & ARCHITECTURE
+     * ============================================================================
+     * Sections:
+     * 1. Game Data Definitions (Age Modes, 10 Stadium Environments, Characters, Achievements)
+     * 2. Procedural Web Audio API Sound Synthesizer (Zero external asset failures)
+     * 3. Persistent State Manager (localStorage with independent 100-level progression per age)
+     * 4. Three.js 3D Engine (Stadium Builder, Animated Footballer + Ball, Obstacles, Collisions)
+     * 5. UI Controller (Navigation, 100-Level Map, Shop, Daily Rewards, Profile, Modals)
+     */
+
+    /* -------------------------------------------------------------------------
+       1. GAME DATA DEFINITIONS
+    ------------------------------------------------------------------------- */
+    const AGE_MODES = {
+        junior: {
+            id: 'junior',
+            name: 'Junior Kickers',
+            ages: 'Ages 5–8',
+            icon: '🌟',
+            themeClass: 'theme-junior',
+            badgeColor: 'text-emerald-300 border-emerald-400/40 bg-emerald-500/20',
+            desc: 'Friendly pace, wide obstacle spacing, and extra coins for young champions!',
+            baseSpeed: 15,
+            maxSpeedBonus: 6,
+            spawnInterval: 26, // wide spacing
+            coinMultiplier: 1.5,
+            baseDistance: 220
+        },
+        rising: {
+            id: 'rising',
+            name: 'Rising Stars',
+            ages: 'Ages 9–12',
+            icon: '⚡',
+            themeClass: 'theme-rising',
+            badgeColor: 'text-cyan-300 border-cyan-400/40 bg-cyan-500/20',
+            desc: 'Balanced arcade action with exciting jumps, slides, and stadium challenges.',
+            baseSpeed: 21,
+            maxSpeedBonus: 9,
+            spawnInterval: 21,
+            coinMultiplier: 1.2,
+            baseDistance: 280
+        },
+        pro: {
+            id: 'pro',
+            name: 'Pro Strikers',
+            ages: 'Ages 13–17',
+            icon: '🔥',
+            themeClass: 'theme-pro',
+            badgeColor: 'text-purple-300 border-purple-400/40 bg-purple-500/20',
+            desc: 'High-speed competitive tournament action requiring sharp reflexes!',
+            baseSpeed: 27,
+            maxSpeedBonus: 12,
+            spawnInterval: 17.5,
+            coinMultiplier: 1.0,
+            baseDistance: 340
+        },
+        legends: {
+            id: 'legends',
+            name: 'World Legends',
+            ages: '18+ Pro',
+            icon: '👑',
+            themeClass: 'theme-legends',
+            badgeColor: 'text-amber-300 border-amber-400/40 bg-amber-500/20',
+            desc: 'Maximum championship velocity and intense tactical combinations!',
+            baseSpeed: 33,
+            maxSpeedBonus: 15,
+            spawnInterval: 15,
+            coinMultiplier: 1.0,
+            baseDistance: 400
+        }
+    };
+
+    const ENVIRONMENTS = [
+        { id: 0, name: 'Grass Football Stadium', levels: '1–10', icon: '🏟️', sky: 0x38bdf8, fog: 0x38bdf8, ground: 0x16a34a, stripe: 0x15803d, line: 0xffffff, accent: 0xfacc15, ambient: 0.85, neon: false, particles: null },
+        { id: 1, name: 'Training Ground', levels: '11–20', icon: '🚧', sky: 0x60a5fa, fog: 0x93c5fd, ground: 0x22c55e, stripe: 0x16a34a, line: 0xfef08a, accent: 0xf97316, ambient: 0.9, neon: false, particles: null },
+        { id: 2, name: 'Neon Football Arena', levels: '21–30', icon: '💠', sky: 0x090d16, fog: 0x0f172a, ground: 0x0f172a, stripe: 0x1e1b4b, line: 0x06b6d4, accent: 0xec4899, ambient: 0.65, neon: true, particles: 'neon' },
+        { id: 3, name: 'City Football Streets', levels: '31–40', icon: '🏙️', sky: 0xfdba74, fog: 0xfed7aa, ground: 0x334155, stripe: 0x1e293b, line: 0xf8fafc, accent: 0xf59e0b, ambient: 0.8, neon: false, particles: null },
+        { id: 4, name: 'Beach Football Stadium', levels: '41–50', icon: '🏖️', sky: 0x0ea5e9, fog: 0x7dd3fc, ground: 0xfcd34d, stripe: 0xfbbf24, line: 0xffffff, accent: 0x0284c7, ambient: 0.95, neon: false, particles: null },
+        { id: 5, name: 'Snow Stadium', levels: '51–60', icon: '❄️', sky: 0xcbd5e1, fog: 0xe2e8f0, ground: 0xf1f5f9, stripe: 0xe2e8f0, line: 0x3b82f6, accent: 0x38bdf8, ambient: 0.9, neon: false, particles: 'snow' },
+        { id: 6, name: 'Night Stadium', levels: '61–70', icon: '🌙', sky: 0x020617, fog: 0x0f172a, ground: 0x064e3b, stripe: 0x065f46, line: 0xffffff, accent: 0xfacc15, ambient: 0.6, neon: false, particles: null },
+        { id: 7, name: 'Futuristic Championship', levels: '71–80', icon: '🚀', sky: 0x1e1b4b, fog: 0x312e81, ground: 0x1e293b, stripe: 0x0f172a, line: 0x38bdf8, accent: 0xa855f7, ambient: 0.75, neon: true, particles: 'neon' },
+        { id: 8, name: 'World Championship', levels: '81–90', icon: '🌍', sky: 0x1d4ed8, fog: 0x3b82f6, ground: 0x15803d, stripe: 0x166534, line: 0xfde047, accent: 0xf59e0b, ambient: 0.85, neon: false, particles: 'confetti' },
+        { id: 9, name: 'Legendary Final Stadium', levels: '91–100', icon: '👑', sky: 0x2e1065, fog: 0x4c1d95, ground: 0x3b0764, stripe: 0x581c87, line: 0xfbbf24, accent: 0xf59e0b, ambient: 0.85, neon: true, particles: 'confetti' }
+    ];
+
+    const CHARACTERS = [
+        { id: 'leo', name: 'Rookie Leo', role: 'Balanced Forward', price: 0, jersey: 0x10b981, shorts: 0xffffff, skin: 0xf1c27d, hair: 0x3b2f2f, cleats: 0xfacc15, perk: 'Standard Agility', perkType: 'none', icon: '⚽' },
+        { id: 'maya', name: 'Velocity Maya', role: 'Wing Sprinter', price: 300, jersey: 0xec4899, shorts: 0x1e293b, skin: 0xd99b66, hair: 0x111827, cleats: 0x06b6d4, perk: '+15% Jump Height', perkType: 'jump', icon: '⚡' },
+        { id: 'marco', name: 'Magnet Marco', role: 'Midfield Maestro', price: 650, jersey: 0x3b82f6, shorts: 0xffffff, skin: 0xe0ac69, hair: 0x4a3525, cleats: 0xf59e0b, perk: 'Extended Coin Magnet', perkType: 'magnet', icon: '🧲' },
+        { id: 'zara', name: 'Titan Zara', role: 'Defensive Wall', price: 1100, jersey: 0x8b5cf6, shorts: 0x0f172a, skin: 0x8d5524, hair: 0x09090b, cleats: 0x10b981, perk: 'Start Every Level w/ Shield', perkType: 'shield', icon: '🛡️' },
+        { id: 'kai', name: 'Cyber Kai', role: 'Neon Striker', price: 1800, jersey: 0x06b6d4, shorts: 0x090d16, skin: 0xf1c27d, hair: 0x38bdf8, cleats: 0xec4899, perk: '+25% Bonus Coins', perkType: 'coins', icon: '🤖' },
+        { id: 'aurelio', name: 'Golden Aurelio', role: 'World Legend #10', price: 3000, jersey: 0xf59e0b, shorts: 0x1e1b4b, skin: 0xc68642, hair: 0x1f2937, cleats: 0xffffff, perk: 'Shield + Magnet +25% Coins', perkType: 'legend', icon: '👑' }
+    ];
+
+    const MILESTONE_REWARDS = {
+        10: 500,
+        20: 800,
+        30: 1200,
+        50: 2000,
+        75: 3500,
+        100: 10000
+    };
+
+    const ACHIEVEMENTS_DEF = [
+        { id: 'first_win', title: 'First Kickoff', desc: 'Complete your very first level', reward: 100, icon: '⚽', check: (s) => s.totalLevelsCleared >= 1 },
+        { id: 'coin_100', title: 'Pocket Change', desc: 'Collect 100 coins during runs', reward: 150, icon: '🪙', check: (s) => s.lifetimeRunCoins >= 100 },
+        { id: 'jumper_25', title: 'Acrobat', desc: 'Perform 25 hurdles jumps', reward: 150, icon: '🦘', check: (s) => s.lifetimeJumps >= 25 },
+        { id: 'slider_20', title: 'Slide Tackler', desc: 'Slide under 20 barriers', reward: 150, icon: '🛝', check: (s) => s.lifetimeSlides >= 20 },
+        { id: 'lvl_10', title: 'Stadium Regular', desc: 'Reach Level 10 in any age mode', reward: 300, icon: '🏟️', check: (s) => s.maxLevelReached >= 10 },
+        { id: 'squad_3', title: 'Team Builder', desc: 'Unlock 3 characters in the Squad Shop', reward: 400, icon: '👕', check: (s) => s.unlockedChars.length >= 3 },
+        { id: 'lvl_50', title: 'Halfway Hero', desc: 'Reach Level 50 in any age mode', reward: 1000, icon: '🔥', check: (s) => s.maxLevelReached >= 50 },
+        { id: 'champion_100', title: 'World Champion 100', desc: 'Beat Level 100 & claim the Champion Trophy!', reward: 2500, icon: '🏆', check: (s) => s.maxLevelReached > 100 || s.championTrophies > 0 }
+    ];
+
+    const AVATARS = ['🏃', '⚽', '🦁', '🐯', '🦅', '⚡', '🔥', '👑', '🚀', '🌟', '🦊', '🐼'];
+
+    /* -------------------------------------------------------------------------
+       2. PROCEDURAL WEB AUDIO SOUND SYNTHESIZER
+    ------------------------------------------------------------------------- */
+    const Sound = {
+        ctx: null,
+        init() {
+            if (!this.ctx) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) this.ctx = new AudioCtx();
+            }
+            if (this.ctx && this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        },
+        play(type) {
+            if (!State.data.settings.sound) return;
+            this.init();
+            if (!this.ctx) return;
+
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            if (type === 'coin') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, now);
+                osc.frequency.exponentialRampToValueAtTime(1320, now + 0.12);
+                gain.gain.setValueAtTime(0.16, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+                osc.start(now);
+                osc.stop(now + 0.14);
+            } else if (type === 'jump') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(520, now + 0.18);
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'slide') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(110, now + 0.18);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'lane') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(360, now);
+                osc.frequency.exponentialRampToValueAtTime(440, now + 0.06);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+                osc.start(now);
+                osc.stop(now + 0.07);
+            } else if (type === 'powerup') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(660, now + 0.08);
+                osc.frequency.setValueAtTime(880, now + 0.16);
+                gain.gain.setValueAtTime(0.16, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+                osc.start(now);
+                osc.stop(now + 0.28);
+            } else if (type === 'hit') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(45, now + 0.35);
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+                osc.start(now);
+                osc.stop(now + 0.36);
+            } else if (type === 'win') {
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, i) => {
+                    const o = this.ctx.createOscillator();
+                    const g = this.ctx.createGain();
+                    o.type = 'triangle';
+                    o.connect(g);
+                    g.connect(this.ctx.destination);
+                    o.frequency.setValueAtTime(freq, now + i * 0.09);
+                    g.gain.setValueAtTime(0.16, now + i * 0.09);
+                    g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.09 + 0.25);
+                    o.start(now + i * 0.09);
+                    o.stop(now + i * 0.09 + 0.26);
+                });
+            }
+        }
+    };
+
+    /* -------------------------------------------------------------------------
+       3. PERSISTENT STATE & ECONOMY MANAGER
+    ------------------------------------------------------------------------- */
+    const State = {
+        STORAGE_KEY: 'football_rush_100_save_v1',
+        data: {
+            nickname: 'Striker01',
+            avatar: '🏃',
+            coins: 250,
+            activeAge: 'rising',
+            equippedChar: 'leo',
+            unlockedChars: ['leo'],
+            tutorialSeen: false,
+            lastDailyClaim: '',
+            dailyStreak: 0,
+            settings: {
+                sound: true,
+                highGraphics: true
+            },
+            // Independent 100-level progression per age mode
+            modes: {
+                junior: { unlockedLevel: 1, completedLevels: {}, bestScore: 0, trophy: false },
+                rising: { unlockedLevel: 1, completedLevels: {}, bestScore: 0, trophy: false },
+                pro:    { unlockedLevel: 1, completedLevels: {}, bestScore: 0, trophy: false },
+                legends:{ unlockedLevel: 1, completedLevels: {}, bestScore: 0, trophy: false }
+            },
+            stats: {
+                totalLevelsCleared: 0,
+                lifetimeRunCoins: 0,
+                lifetimeJumps: 0,
+                lifetimeSlides: 0,
+                maxLevelReached: 1,
+                championTrophies: 0
+            },
+            claimedAchievements: [],
+            dailyChallenges: {
+                date: '',
+                coinsRun: 0,
+                jumpsRun: 0,
+                levelsWon: 0,
+                claimed: { c1: false, c2: false, c3: false }
+            }
+        },
+
+        load() {
+            try {
+                const raw = localStorage.getItem(this.STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    this.data = this.deepMerge(this.data, parsed);
+                }
+            } catch (e) {
+                console.warn('Could not load save state, using defaults.', e);
+            }
+            this.checkDailyReset();
+        },
+
+        save() {
+            try {
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data));
+            } catch (e) {
+                console.warn('Could not save state.', e);
+            }
+        },
+
+        deepMerge(target, source) {
+            for (const key in source) {
+                if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                    if (!target[key]) target[key] = {};
+                    this.deepMerge(target[key], source[key]);
+                } else {
+                    target[key] = source[key];
+                }
+            }
+            return target;
+        },
+
+        checkDailyReset() {
+            const today = new Date().toISOString().slice(0, 10);
+            if (this.data.dailyChallenges.date !== today) {
+                this.data.dailyChallenges = {
+                    date: today,
+                    coinsRun: 0,
+                    jumpsRun: 0,
+                    levelsWon: 0,
+                    claimed: { c1: false, c2: false, c3: false }
+                };
+                this.save();
+            }
+        },
+
+        getModeData() {
+            return this.data.modes[this.data.activeAge];
+        },
+
+        getCurrentLevel() {
+            const unlocked = this.getModeData().unlockedLevel;
+            return Math.min(100, unlocked);
+        },
+
+        getEquippedCharacter() {
+            return CHARACTERS.find(c => c.id === this.data.equippedChar) || CHARACTERS[0];
+        },
+
+        addCoins(amount) {
+            this.data.coins += Math.round(amount);
+            this.save();
+            UI.updateHeader();
+        }
+    };
+
+    /* -------------------------------------------------------------------------
+       4. THREE.JS 3D RUNNER ENGINE
+    ------------------------------------------------------------------------- */
+    const Game = {
+        scene: null,
+        camera: null,
+        renderer: null,
+        playerGroup: null,
+        limbs: {},
+        ballMesh: null,
+        shieldMesh: null,
+        trackGroup: null,
+        envPropsGroup: null,
+        particleSystem: null,
+        ambientLight: null,
+        dirLight: null,
+
+        // Gameplay state
+        isPlaying: false,
+        isPaused: false,
+        currentLevel: 1,
+        currentEnvIndex: 0,
+        lanes: [-2.4, 0, 2.4],
+        currentLane: 1, // 0=Left, 1=Center, 2=Right
+        targetX: 0,
+        playerY: 0,
+        velocityY: 0,
+        isJumping: false,
+        isSliding: false,
+        slideTimer: 0,
+        runCycle: 0,
+
+        // Level progression metrics
+        speed: 20,
+        distance: 0,
+        targetDistance: 300,
+        score: 0,
+        runCoins: 0,
+        hasShield: false,
+        magnetTimer: 0,
+        shakeTimer: 0,
+
+        // Pooled / Active 3D entities
+        obstacles: [],
+        coins: [],
+        powerups: [],
+        nextSpawnZ: -35,
+        finishLineMesh: null,
+        trophyMonument: null,
+
+        clock: new THREE.Clock(),
+
+        init() {
+            const container = document.getElementById('game-canvas-container');
+            this.scene = new THREE.Scene();
+            this.scene.background = new THREE.Color(0x38bdf8);
+            this.scene.fog = new THREE.FogExp2(0x38bdf8, 0.014);
+
+            this.camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 180);
+            this.camera.position.set(0, 5.2, 8.8);
+            this.camera.lookAt(0, 1.5, -8);
+
+            this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            this.renderer.shadowMap.enabled = State.data.settings.highGraphics;
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(this.renderer.domElement);
+
+            // Lights
+            this.ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            this.scene.add(this.ambientLight);
+
+            this.dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            this.dirLight.position.set(15, 30, 20);
+            this.dirLight.castShadow = true;
+            this.dirLight.shadow.mapSize.width = 1024;
+            this.dirLight.shadow.mapSize.height = 1024;
+            this.scene.add(this.dirLight);
+
+            this.trackGroup = new THREE.Group();
+            this.envPropsGroup = new THREE.Group();
+            this.scene.add(this.trackGroup);
+            this.scene.add(this.envPropsGroup);
+
+            this.buildPlayer();
+            this.applyEnvironment(0);
+            this.bindInputs();
+
+            window.addEventListener('resize', () => this.onResize());
+            this.animate();
+        },
+
+        onResize() {
+            if (!this.camera || !this.renderer) return;
+            this.camera.aspect = window.innerWidth / window.innerHeight;
+            this.camera.updateProjectionMatrix();
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+        },
+
+        buildPlayer() {
+            if (this.playerGroup) this.scene.remove(this.playerGroup);
+            const char = State.getEquippedCharacter();
+
+            this.playerGroup = new THREE.Group();
+
+            // Materials
+            const jerseyMat = new THREE.MeshStandardMaterial({ color: char.jersey, roughness: 0.4 });
+            const shortsMat = new THREE.MeshStandardMaterial({ color: char.shorts, roughness: 0.5 });
+            const skinMat = new THREE.MeshStandardMaterial({ color: char.skin, roughness: 0.6 });
+            const hairMat = new THREE.MeshStandardMaterial({ color: char.hair, roughness: 0.8 });
+            const cleatMat = new THREE.MeshStandardMaterial({ color: char.cleats, roughness: 0.3 });
+
+            // Torso
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.85, 1.05, 0.48), jerseyMat);
+            torso.position.y = 1.45;
+            torso.castShadow = true;
+            this.playerGroup.add(torso);
+
+            // Number 10 stripe on back
+            const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.55, 0.5), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+            stripe.position.y = 1.5;
+            this.playerGroup.add(stripe);
+
+            // Head
+            const headGroup = new THREE.Group();
+            headGroup.position.y = 2.32;
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.62, 0.62), skinMat);
+            head.castShadow = true;
+            const hair = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.25, 0.66), hairMat);
+            hair.position.y = 0.24;
+            headGroup.add(head, hair);
+            this.playerGroup.add(headGroup);
+
+            // Arms
+            const armGeo = new THREE.BoxGeometry(0.26, 0.82, 0.26);
+            const leftArm = new THREE.Mesh(armGeo, skinMat);
+            leftArm.position.set(-0.6, 1.45, 0);
+            const rightArm = new THREE.Mesh(armGeo, skinMat);
+            rightArm.position.set(0.6, 1.45, 0);
+            this.playerGroup.add(leftArm, rightArm);
+
+            // Legs
+            const legGeo = new THREE.BoxGeometry(0.32, 0.88, 0.34);
+            const leftLeg = new THREE.Mesh(legGeo, shortsMat);
+            leftLeg.position.set(-0.24, 0.52, 0);
+            const leftCleat = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.22, 0.52), cleatMat);
+            leftCleat.position.set(0, -0.38, -0.08);
+            leftLeg.add(leftCleat);
+
+            const rightLeg = new THREE.Mesh(legGeo, shortsMat);
+            rightLeg.position.set(0.24, 0.52, 0);
+            const rightCleat = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.22, 0.52), cleatMat);
+            rightCleat.position.set(0, -0.38, -0.08);
+            rightLeg.add(rightCleat);
+
+            this.playerGroup.add(leftLeg, rightLeg);
+
+            // Dribbling Football in front of feet
+            const ballGeo = new THREE.IcosahedronGeometry(0.34, 1);
+            const ballMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35, flatShading: true });
+            this.ballMesh = new THREE.Mesh(ballGeo, ballMat);
+            this.ballMesh.position.set(0, 0.34, -1.15);
+            this.ballMesh.castShadow = true;
+            this.playerGroup.add(this.ballMesh);
+
+            // Shield bubble visual
+            const shieldGeo = new THREE.SphereGeometry(1.55, 20, 20);
+            const shieldMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.22, wireframe: true });
+            this.shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
+            this.shieldMesh.position.y = 1.35;
+            this.shieldMesh.visible = false;
+            this.playerGroup.add(this.shieldMesh);
+
+            this.limbs = { torso, headGroup, leftArm, rightArm, leftLeg, rightLeg };
+            this.scene.add(this.playerGroup);
+        },
+
+        applyEnvironment(envIndex) {
+            this.currentEnvIndex = envIndex;
+            const env = ENVIRONMENTS[envIndex] || ENVIRONMENTS[0];
+
+            this.scene.background = new THREE.Color(env.sky);
+            this.scene.fog = new THREE.FogExp2(env.fog, 0.013);
+            this.ambientLight.intensity = env.ambient;
+
+            // Clear old track & props
+            while (this.trackGroup.children.length) this.trackGroup.remove(this.trackGroup.children[0]);
+            while (this.envPropsGroup.children.length) this.envPropsGroup.remove(this.envPropsGroup.children[0]);
+            if (this.particleSystem) {
+                this.scene.remove(this.particleSystem);
+                this.particleSystem = null;
+            }
+
+            // Main Pitch Runway (width 9.6, length 240)
+            const pitchGeo = new THREE.PlaneGeometry(9.6, 240);
+            const pitchMat = new THREE.MeshStandardMaterial({ color: env.ground, roughness: env.neon ? 0.25 : 0.85 });
+            const pitch = new THREE.Mesh(pitchGeo, pitchMat);
+            pitch.rotation.x = -Math.PI / 2;
+            pitch.position.z = -95;
+            pitch.receiveShadow = true;
+            this.trackGroup.add(pitch);
+
+            // Alternating turf stripes for speed perception
+            const stripeMat = new THREE.MeshStandardMaterial({ color: env.stripe, roughness: 0.85 });
+            for (let z = 10; z > -210; z -= 16) {
+                const stripe = new THREE.Mesh(new THREE.PlaneGeometry(9.4, 8), stripeMat);
+                stripe.rotation.x = -Math.PI / 2;
+                stripe.position.set(0, 0.01, z);
+                stripe.receiveShadow = true;
+                this.trackGroup.add(stripe);
+            }
+
+            // Lane dividers & sidelines
+            const lineMat = new THREE.MeshBasicMaterial({ color: env.line });
+            [-4.6, -1.2, 1.2, 4.6].forEach(lx => {
+                const line = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 240), lineMat);
+                line.rotation.x = -Math.PI / 2;
+                line.position.set(lx, 0.02, -95);
+                this.trackGroup.add(line);
+            });
+
+            // Outer Stadium Stands / Environment Scenery
+            const outerGround = new THREE.Mesh(
+                new THREE.PlaneGeometry(160, 240),
+                new THREE.MeshStandardMaterial({ color: env.stripe, roughness: 0.95 })
+            );
+            outerGround.rotation.x = -Math.PI / 2;
+            outerGround.position.set(0, -0.05, -95);
+            this.envPropsGroup.add(outerGround);
+
+            // Stadium Side Walls & Scenery Pillars/Lights
+            const wallMat = new THREE.MeshStandardMaterial({ color: env.accent, roughness: 0.4 });
+            const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.1, 240), wallMat);
+            leftWall.position.set(-5.1, 0.55, -95);
+            const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.1, 240), wallMat);
+            rightWall.position.set(5.1, 0.55, -95);
+            this.envPropsGroup.add(leftWall, rightWall);
+
+            // Scenery objects along both sides based on environment
+            for (let z = 0; z > -200; z -= 18) {
+                [-1, 1].forEach(side => {
+                    if (env.neon) {
+                        // Glowing Neon Arch / Pylon
+                        const pylon = new THREE.Mesh(
+                            new THREE.BoxGeometry(0.5, 7, 0.5),
+                            new THREE.MeshBasicMaterial({ color: side === -1 ? env.line : env.accent })
+                        );
+                        pylon.position.set(side * 6.5, 3.5, z);
+                        this.envPropsGroup.add(pylon);
+                    } else if (envIndex === 3) {
+                        // City buildings
+                        const h = 8 + Math.abs(Math.sin(z * side)) * 12;
+                        const bldg = new THREE.Mesh(
+                            new THREE.BoxGeometry(5, h, 8),
+                            new THREE.MeshStandardMaterial({ color: 0x1e293b })
+                        );
+                        bldg.position.set(side * 10, h / 2, z);
+                        this.envPropsGroup.add(bldg);
+                    } else if (envIndex === 4) {
+                        // Beach palm trunks & canopy
+                        const trunk = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.25, 0.4, 5.5, 6),
+                            new THREE.MeshStandardMaterial({ color: 0x92400e })
+                        );
+                        trunk.position.set(side * 7.5, 2.75, z);
+                        const leaves = new THREE.Mesh(
+                            new THREE.ConeGeometry(2.2, 2, 6),
+                            new THREE.MeshStandardMaterial({ color: 0x16a34a })
+                        );
+                        leaves.position.set(side * 7.5, 5.8, z);
+                        this.envPropsGroup.add(trunk, leaves);
+                    } else {
+                        // Stadium Tiered Stands & Floodlight Towers
+                        const stand = new THREE.Mesh(
+                            new THREE.BoxGeometry(6, 4.5, 14),
+                            new THREE.MeshStandardMaterial({ color: 0x1e293b })
+                        );
+                        stand.position.set(side * 9.5, 2.25, z);
+                        this.envPropsGroup.add(stand);
+
+                        if (z % 36 === 0) {
+                            const pole = new THREE.Mesh(
+                                new THREE.CylinderGeometry(0.2, 0.25, 11, 6),
+                                new THREE.MeshStandardMaterial({ color: 0x94a3b8 })
+                            );
+                            pole.position.set(side * 6.5, 5.5, z);
+                            const lightBox = new THREE.Mesh(
+                                new THREE.BoxGeometry(1.6, 1.0, 0.6),
+                                new THREE.MeshBasicMaterial({ color: 0xffffff })
+                            );
+                            lightBox.position.set(side * 6.2, 11, z);
+                            lightBox.lookAt(0, 0, z);
+                            this.envPropsGroup.add(pole, lightBox);
+                        }
+                    }
+                });
+            }
+
+            // Weather / Celebration Particles (Snow, Confetti, Neon Sparks)
+            if (env.particles && State.data.settings.highGraphics) {
+                const count = 260;
+                const geo = new THREE.BufferGeometry();
+                const positions = new Float32Array(count * 3);
+                for (let i = 0; i < count * 3; i += 3) {
+                    positions[i] = (Math.random() - 0.5) * 35;
+                    positions[i + 1] = Math.random() * 18;
+                    positions[i + 2] = -Math.random() * 140 + 10;
+                }
+                geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                const pColor = env.particles === 'snow' ? 0xffffff : (env.particles === 'confetti' ? 0xfacc15 : 0x38bdf8);
+                const mat = new THREE.PointsMaterial({ color: pColor, size: 0.35 });
+                this.particleSystem = new THREE.Points(geo, mat);
+                this.scene.add(this.particleSystem);
+            }
+        },
+
+        previewEnvironment(envIdx) {
+            this.applyEnvironment(envIdx);
+        },
+
+        clearEntities() {
+            this.obstacles.forEach(o => this.scene.remove(o.mesh));
+            this.coins.forEach(c => this.scene.remove(c.mesh));
+            this.powerups.forEach(p => this.scene.remove(p.mesh));
+            this.obstacles = [];
+            this.coins = [];
+            this.powerups = [];
+            if (this.finishLineMesh) {
+                this.scene.remove(this.finishLineMesh);
+                this.finishLineMesh = null;
+            }
+        },
+
+        startLevel(levelNum) {
+            Sound.init();
+            this.currentLevel = Math.max(1, Math.min(100, levelNum));
+            const envIndex = Math.min(9, Math.floor((this.currentLevel - 1) / 10));
+            this.applyEnvironment(envIndex);
+            this.buildPlayer();
+            this.clearEntities();
+
+            const ageCfg = AGE_MODES[State.data.activeAge];
+            const char = State.getEquippedCharacter();
+
+            // Calculate balanced speed & distance scaling for this level
+            const levelProgressRatio = (this.currentLevel - 1) / 99;
+            this.speed = ageCfg.baseSpeed + levelProgressRatio * ageCfg.maxSpeedBonus;
+            this.targetDistance = Math.round(ageCfg.baseDistance + (this.currentLevel - 1) * 14);
+
+            // Reset player state
+            this.currentLane = 1;
+            this.targetX = 0;
+            this.playerGroup.position.set(0, 0, 0);
+            this.playerY = 0;
+            this.velocityY = 0;
+            this.isJumping = false;
+            this.isSliding = false;
+            this.slideTimer = 0;
+            this.distance = 0;
+            this.score = 0;
+            this.runCoins = 0;
+            this.nextSpawnZ = -32;
+
+            // Character starting perks
+            this.hasShield = (char.perkType === 'shield' || char.perkType === 'legend');
+            this.magnetTimer = (char.perkType === 'magnet' || char.perkType === 'legend') ? 12 : 0;
+            this.shieldMesh.visible = this.hasShield;
+
+            // Create Finish Goal Arch at targetDistance
+            this.createFinishGoal();
+
+            // Pre-populate initial runway
+            while (this.nextSpawnZ > -140) {
+                this.spawnWave(this.nextSpawnZ);
+                this.nextSpawnZ -= ageCfg.spawnInterval;
+            }
+
+            this.isPlaying = true;
+            this.isPaused = false;
+
+            // Switch UI to HUD
+            UI.closeModals();
+            document.getElementById('menu-screens').classList.add('hidden');
+            document.getElementById('main-nav-tabs').classList.add('hidden');
+            document.getElementById('game-hud').classList.remove('hidden');
+            document.getElementById('hud-level').textContent = this.currentLevel;
+            document.getElementById('hud-env-name').textContent = ENVIRONMENTS[envIndex].name;
+            document.getElementById('hud-target').textContent = this.targetDistance;
+            this.updateHUD();
+        },
+
+        createFinishGoal() {
+            const goalGroup = new THREE.Group();
+            const postMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfacc15, emissiveIntensity: 0.35 });
+            const leftPost = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 4.5, 12), postMat);
+            leftPost.position.set(-4.2, 2.25, 0);
+            const rightPost = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 4.5, 12), postMat);
+            rightPost.position.set(4.2, 2.25, 0);
+            const crossbar = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 8.6, 12), postMat);
+            crossbar.rotation.z = Math.PI / 2;
+            crossbar.position.set(0, 4.5, 0);
+
+            // Checkered banner
+            const banner = new THREE.Mesh(
+                new THREE.BoxGeometry(8.2, 0.9, 0.2),
+                new THREE.MeshBasicMaterial({ color: 0xf59e0b })
+            );
+            banner.position.set(0, 4.1, 0);
+
+            goalGroup.add(leftPost, rightPost, crossbar, banner);
+
+            // If Level 100, add Golden Champion Trophy Monument at the finish line!
+            if (this.currentLevel === 100) {
+                const cupBase = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.1, 0.8, 16), new THREE.MeshStandardMaterial({ color: 0x1e1b4b }));
+                cupBase.position.set(0, 0.4, -2);
+                const cupBowl = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 0.4, 1.8, 16), new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.8, roughness: 0.2 }));
+                cupBowl.position.set(0, 1.7, -2);
+                goalGroup.add(cupBase, cupBowl);
+            }
+
+            goalGroup.position.set(0, 0, -this.targetDistance);
+            this.finishLineMesh = goalGroup;
+            this.scene.add(goalGroup);
+        },
+
+        spawnWave(zPos) {
+            // Don't spawn obstacles right on top of finish line
+            if (Math.abs(zPos) > this.targetDistance - 18) return;
+
+            const laneIndices = [0, 1, 2];
+            // Shuffle lanes
+            for (let i = laneIndices.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [laneIndices[i], laneIndices[j]] = [laneIndices[j], laneIndices[i]];
+            }
+
+            // Decide how many obstacles in this wave (1 or 2 max so there's always a clear path!)
+            const maxObs = (State.data.activeAge === 'junior' || this.currentLevel <= 3) ? 1 : (Math.random() < 0.55 ? 2 : 1);
+
+            for (let i = 0; i < maxObs; i++) {
+                const lane = laneIndices[i];
+                const x = this.lanes[lane];
+                const roll = Math.random();
+
+                if (roll < 0.42) {
+                    // Type 1: Low Hurdle (Jumpable)
+                    const hurdleGroup = new THREE.Group();
+                    const bar = new THREE.Mesh(
+                        new THREE.BoxGeometry(1.85, 0.45, 0.35),
+                        new THREE.MeshStandardMaterial({ color: 0xef4444 })
+                    );
+                    bar.position.y = 0.85;
+                    const legL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.95, 0.4), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+                    legL.position.set(-0.8, 0.47, 0);
+                    const legR = legL.clone();
+                    legR.position.x = 0.8;
+                    hurdleGroup.add(bar, legL, legR);
+                    hurdleGroup.position.set(x, 0, zPos);
+                    this.scene.add(hurdleGroup);
+                    this.obstacles.push({ mesh: hurdleGroup, lane, type: 'low', minY: 0, maxY: 1.05 });
+                } else if (roll < 0.75) {
+                    // Type 2: High Training Crossbar (Slide under!)
+                    const highGroup = new THREE.Group();
+                    const postL = new THREE.Mesh(new THREE.BoxGeometry(0.22, 2.7, 0.25), new THREE.MeshStandardMaterial({ color: 0xf59e0b }));
+                    postL.position.set(-0.92, 1.35, 0);
+                    const postR = postL.clone();
+                    postR.position.x = 0.92;
+                    const topBoard = new THREE.Mesh(new THREE.BoxGeometry(2.05, 1.15, 0.35), new THREE.MeshStandardMaterial({ color: 0x2563eb }));
+                    topBoard.position.set(0, 2.1, 0);
+                    highGroup.add(postL, postR, topBoard);
+                    highGroup.position.set(x, 0, zPos);
+                    this.scene.add(highGroup);
+                    this.obstacles.push({ mesh: highGroup, lane, type: 'high', minY: 1.45, maxY: 2.8 });
+                } else {
+                    // Type 3: Defender Dummy / Cone Wall (Switch lanes or high jump)
+                    const defGroup = new THREE.Group();
+                    const body = new THREE.Mesh(
+                        new THREE.CylinderGeometry(0.55, 0.65, 1.85, 12),
+                        new THREE.MeshStandardMaterial({ color: 0xdc2626 })
+                    );
+                    body.position.y = 0.92;
+                    const head = new THREE.Mesh(
+                        new THREE.SphereGeometry(0.42, 12, 12),
+                        new THREE.MeshStandardMaterial({ color: 0xfacc15 })
+                    );
+                    head.position.y = 2.05;
+                    defGroup.add(body, head);
+                    defGroup.position.set(x, 0, zPos);
+                    this.scene.add(defGroup);
+                    this.obstacles.push({ mesh: defGroup, lane, type: 'tall', minY: 0, maxY: 2.3 });
+                }
+            }
+
+            // Spawn a line of 3 Golden Coins in the safe open lane
+            const safeLane = laneIndices[maxObs];
+            const coinX = this.lanes[safeLane];
+            for (let c = 0; c < 3; c++) {
+                const coinGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.14, 16);
+                const coinMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xd97706, emissiveIntensity: 0.4, metalness: 0.7, roughness: 0.2 });
+                const coinMesh = new THREE.Mesh(coinGeo, coinMat);
+                coinMesh.rotation.x = Math.PI / 2;
+                coinMesh.position.set(coinX, 0.95, zPos - c * 2.6);
+                this.scene.add(coinMesh);
+                this.coins.push({ mesh: coinMesh, lane: safeLane });
+            }
+
+            // Occasional Power-up (Magnet or Shield)
+            if (Math.random() < 0.14) {
+                const pType = Math.random() < 0.5 ? 'magnet' : 'shield';
+                const pGeo = new THREE.OctahedronGeometry(0.52, 0);
+                const pMat = new THREE.MeshStandardMaterial({
+                    color: pType === 'magnet' ? 0xa855f7 : 0x38bdf8,
+                    emissive: pType === 'magnet' ? 0x7e22ce : 0x0284c7,
+                    emissiveIntensity: 0.6
+                });
+                const pMesh = new THREE.Mesh(pGeo, pMat);
+                pMesh.position.set(coinX, 1.2, zPos - 8.5);
+                this.scene.add(pMesh);
+                this.powerups.push({ mesh: pMesh, type: pType });
+            }
+        },
+
+        handleInput(action) {
+            if (!this.isPlaying || this.isPaused) return;
+            const char = State.getEquippedCharacter();
+
+            if (action === 'left' && this.currentLane > 0) {
+                this.currentLane--;
+                this.targetX = this.lanes[this.currentLane];
+                Sound.play('lane');
+            } else if (action === 'right' && this.currentLane < 2) {
+                this.currentLane++;
+                this.targetX = this.lanes[this.currentLane];
+                Sound.play('lane');
+            } else if (action === 'jump' && !this.isJumping) {
+                this.isJumping = true;
+                this.isSliding = false;
+                this.playerGroup.scale.y = 1;
+                const jumpBoost = (char.perkType === 'jump') ? 1.15 : 1.0;
+                this.velocityY = 13.8 * jumpBoost;
+                Sound.play('jump');
+
+                // Track stats & daily challenge
+                State.data.stats.lifetimeJumps++;
+                State.data.dailyChallenges.jumpsRun++;
+            } else if (action === 'slide' && !this.isSliding) {
+                this.isSliding = true;
+                this.slideTimer = 0.68;
+                if (this.isJumping) {
+                    // Fast slam down into slide
+                    this.velocityY = -18;
+                }
+                Sound.play('slide');
+
+                // Track stats
+                State.data.stats.lifetimeSlides++;
+            }
+        },
+
+        bindInputs() {
+            // Keyboard controls
+            window.addEventListener('keydown', (e) => {
+                if (['ArrowLeft', 'KeyA'].includes(e.code)) this.handleInput('left');
+                else if (['ArrowRight', 'KeyD'].includes(e.code)) this.handleInput('right');
+                else if (['Space', 'ArrowUp', 'KeyW'].includes(e.code)) {
+                    if (this.isPlaying) e.preventDefault();
+                    this.handleInput('jump');
+                }
+                else if (['ArrowDown', 'KeyS'].includes(e.code)) this.handleInput('slide');
+                else if (e.code === 'Escape' && this.isPlaying) this.togglePause();
+            });
+
+            // Touch swipe gestures for mobile
+            let touchStartX = 0;
+            let touchStartY = 0;
+            const canvasEl = document.getElementById('game-canvas-container');
+
+            canvasEl.addEventListener('touchstart', (e) => {
+                if (e.touches.length > 0) {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                }
+            }, { passive: true });
+
+            canvasEl.addEventListener('touchend', (e) => {
+                if (!this.isPlaying || e.changedTouches.length === 0) return;
+                const dx = e.changedTouches[0].clientX - touchStartX;
+                const dy = e.changedTouches[0].clientY - touchStartY;
+                if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    this.handleInput(dx > 0 ? 'right' : 'left');
+                } else {
+                    this.handleInput(dy < 0 ? 'jump' : 'slide');
+                }
+            }, { passive: true });
+        },
+
+        togglePause() {
+            if (!this.isPlaying) return;
+            this.isPaused = !this.isPaused;
+            if (this.isPaused) {
+                UI.openModal('pause-modal');
+            } else {
+                UI.closeModals();
+                this.clock.getDelta(); // reset delta spike
+            }
+        },
+
+        restartLevel() {
+            this.startLevel(this.currentLevel);
+        },
+
+        nextLevel() {
+            const next = Math.min(100, this.currentLevel + 1);
+            this.startLevel(next);
+        },
+
+        quitToMenu() {
+            this.isPlaying = false;
+            this.isPaused = false;
+            this.clearEntities();
+            this.playerGroup.position.set(0, 0, 0);
+            this.playerGroup.scale.set(1, 1, 1);
+            UI.closeModals();
+            document.getElementById('game-hud').classList.add('hidden');
+            document.getElementById('menu-screens').classList.remove('hidden');
+            document.getElementById('main-nav-tabs').classList.remove('hidden');
+            UI.refreshAll();
+        },
+
+        updateHUD() {
+            document.getElementById('hud-dist').textContent = Math.min(this.targetDistance, Math.floor(this.distance));
+            const pct = Math.min(100, (this.distance / this.targetDistance) * 100);
+            document.getElementById('hud-progress-fill').style.width = `${pct}%`;
+            document.getElementById('hud-run-coins').textContent = this.runCoins;
+            document.getElementById('hud-score').textContent = Math.floor(this.score);
+
+            document.getElementById('hud-shield-badge').classList.toggle('hidden', !this.hasShield);
+            document.getElementById('hud-magnet-badge').classList.toggle('hidden', this.magnetTimer <= 0);
+        },
+
+        handleLevelWin() {
+            this.isPlaying = false;
+            Sound.play('win');
+
+            const ageCfg = AGE_MODES[State.data.activeAge];
+            const char = State.getEquippedCharacter();
+            const coinBonusPerk = (char.perkType === 'coins' || char.perkType === 'legend') ? 1.25 : 1.0;
+
+            const baseCompletionBonus = Math.round((40 + this.currentLevel * 5) * ageCfg.coinMultiplier * coinBonusPerk);
+            const milestoneBonus = MILESTONE_REWARDS[this.currentLevel] || 0;
+            const totalEarned = this.runCoins + baseCompletionBonus + milestoneBonus;
+
+            // Update progression for active age mode
+            const modeData = State.getModeData();
+            const isFirstClear = !modeData.completedLevels[this.currentLevel];
+            modeData.completedLevels[this.currentLevel] = true;
+
+            if (this.currentLevel >= modeData.unlockedLevel && this.currentLevel < 100) {
+                modeData.unlockedLevel = this.currentLevel + 1;
+            }
+            if (this.currentLevel === 100) {
+                modeData.trophy = true;
+                State.data.stats.championTrophies++;
+            }
+
+            const finalScore = Math.floor(this.score + baseCompletionBonus * 2);
+            if (finalScore > modeData.bestScore) {
+                modeData.bestScore = finalScore;
+            }
+
+            // Global stats & daily challenge
+            if (isFirstClear) State.data.stats.totalLevelsCleared++;
+            State.data.stats.maxLevelReached = Math.max(State.data.stats.maxLevelReached, modeData.unlockedLevel);
+            State.data.dailyChallenges.levelsWon++;
+
+            // Award total coins
+            State.addCoins(totalEarned);
+            UI.checkAchievements();
+
+            // Populate Win Modal
+            document.getElementById('win-level-num').textContent = this.currentLevel;
+            document.getElementById('win-title').textContent = this.currentLevel === 100 ? '🏆 WORLD CHAMPION!' : 'GOAL! LEVEL CLEARED!';
+            document.getElementById('win-subtitle').textContent = this.currentLevel === 100
+                ? `You conquered all 100 levels in ${ageCfg.name}!`
+                : `Unlocked Level ${Math.min(100, this.currentLevel + 1)} in ${ageCfg.name}!`;
+
+            document.getElementById('win-run-coins').textContent = this.runCoins;
+            document.getElementById('win-bonus-coins').textContent = baseCompletionBonus;
+            document.getElementById('win-total-coins').textContent = totalEarned;
+
+            const mRow = document.getElementById('win-milestone-row');
+            if (milestoneBonus > 0) {
+                mRow.classList.remove('hidden');
+                document.getElementById('win-milestone-coins').textContent = milestoneBonus;
+            } else {
+                mRow.classList.add('hidden');
+            }
+
+            const nextBtn = document.getElementById('win-next-btn');
+            if (this.currentLevel >= 100) {
+                nextBtn.textContent = '🏆 VIEW TROPHY MAP';
+                nextBtn.onclick = () => { this.quitToMenu(); UI.navigate('map'); };
+            } else {
+                nextBtn.textContent = `PLAY LEVEL ${this.currentLevel + 1} ➔`;
+                nextBtn.onclick = () => this.nextLevel();
+            }
+
+            UI.openModal('win-modal');
+        },
+
+        handleGameOver() {
+            this.isPlaying = false;
+            Sound.play('hit');
+            this.shakeTimer = 0.35;
+
+            const modeData = State.getModeData();
+            const finalScore = Math.floor(this.score);
+            if (finalScore > modeData.bestScore) {
+                modeData.bestScore = finalScore;
+            }
+
+            // Player keeps all coins collected during the run!
+            State.addCoins(this.runCoins);
+            UI.checkAchievements();
+
+            document.getElementById('go-dist').textContent = Math.floor(this.distance);
+            document.getElementById('go-target').textContent = this.targetDistance;
+            document.getElementById('go-score').textContent = finalScore;
+            document.getElementById('go-coins').textContent = this.runCoins;
+
+            UI.openModal('gameover-modal');
+        },
+
+        animate() {
+            requestAnimationFrame(() => this.animate());
+            const dt = Math.min(this.clock.getDelta(), 0.05);
+
+            // Rotate ambient particles
+            if (this.particleSystem) {
+                this.particleSystem.position.z += dt * 8;
+                if (this.particleSystem.position.z > 40) this.particleSystem.position.z = 0;
+            }
+
+            // Lobby idle running animation
+            if (!this.isPlaying) {
+                this.runCycle += dt * 6;
+                this.animatePlayerLimbs(dt, false);
+                this.renderer.render(this.scene, this.camera);
+                return;
+            }
+
+            if (this.isPaused) return;
+
+            // Advance distance & score
+            const stepZ = this.speed * dt;
+            this.distance += stepZ;
+            this.score += stepZ * 2.5;
+            this.runCycle += dt * (this.speed * 0.55);
+
+            // Magnet timer
+            if (this.magnetTimer > 0) {
+                this.magnetTimer = Math.max(0, this.magnetTimer - dt);
+            }
+
+            // Smooth horizontal lane interpolation
+            this.playerGroup.position.x += (this.targetX - this.playerGroup.position.x) * Math.min(1, dt * 15);
+
+            // Vertical Jump Physics
+            if (this.isJumping) {
+                this.playerY += this.velocityY * dt;
+                this.velocityY -= 36 * dt; // Gravity
+                if (this.playerY <= 0) {
+                    this.playerY = 0;
+                    this.velocityY = 0;
+                    this.isJumping = false;
+                }
+            }
+            this.playerGroup.position.y = this.playerY;
+
+            // Slide State
+            if (this.isSliding) {
+                this.slideTimer -= dt;
+                this.playerGroup.scale.y = 0.48;
+                if (this.slideTimer <= 0) {
+                    this.isSliding = false;
+                    this.playerGroup.scale.y = 1.0;
+                }
+            }
+
+            this.animatePlayerLimbs(dt, true);
+
+            // Move Finish Line
+            if (this.finishLineMesh) {
+                this.finishLineMesh.position.z += stepZ;
+            }
+
+            // Spawn upcoming waves dynamically
+            const ageCfg = AGE_MODES[State.data.activeAge];
+            this.nextSpawnZ += stepZ;
+            if (this.nextSpawnZ > -140) {
+                this.spawnWave(this.nextSpawnZ);
+                this.nextSpawnZ -= ageCfg.spawnInterval;
+            }
+
+            // Player Hitbox bounds
+            const pX = this.playerGroup.position.x;
+            const pBottom = this.playerY;
+            const pTop = this.playerY + (this.isSliding ? 1.1 : 2.35);
+
+            // Update & Check Obstacles
+            for (let i = this.obstacles.length - 1; i >= 0; i--) {
+                const obs = this.obstacles[i];
+                obs.mesh.position.z += stepZ;
+                const oz = obs.mesh.position.z;
+
+                // Collision Check near player Z=0
+                if (oz > -0.75 && oz < 0.75) {
+                    const dx = Math.abs(obs.mesh.position.x - pX);
+                    if (dx < 0.85) {
+                        // Vertical overlap check
+                        const hitVertical = (pBottom < obs.maxY - 0.12) && (pTop > obs.minY + 0.12);
+                        if (hitVertical) {
+                            if (this.hasShield) {
+                                // Shield absorbs hit!
+                                this.hasShield = false;
+                                this.shieldMesh.visible = false;
+                                this.shakeTimer = 0.25;
+                                Sound.play('hit');
+                                UI.toast('🛡️ Shield absorbed the tackle!', 'info');
+                                this.scene.remove(obs.mesh);
+                                this.obstacles.splice(i, 1);
+                                continue;
+                            } else {
+                                this.handleGameOver();
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                if (oz > 14) {
+                    this.scene.remove(obs.mesh);
+                    this.obstacles.splice(i, 1);
+                }
+            }
+
+            // Update & Check Coins
+            const char = State.getEquippedCharacter();
+            const coinValue = Math.round(5 * ageCfg.coinMultiplier * ((char.perkType === 'coins' || char.perkType === 'legend') ? 1.25 : 1.0));
+
+            for (let i = this.coins.length - 1; i >= 0; i--) {
+                const c = this.coins[i];
+                c.mesh.position.z += stepZ;
+                c.mesh.rotation.z += dt * 4.5;
+
+                // Magnet attraction
+                if (this.magnetTimer > 0 && c.mesh.position.z > -22 && c.mesh.position.z < 3) {
+                    c.mesh.position.x += (pX - c.mesh.position.x) * dt * 9;
+                    c.mesh.position.y += ((this.playerY + 1.0) - c.mesh.position.y) * dt * 9;
+                }
+
+                const dz = Math.abs(c.mesh.position.z);
+                const dx = Math.abs(c.mesh.position.x - pX);
+                const dy = Math.abs(c.mesh.position.y - (this.playerY + 1.0));
+
+                if (dz < 1.15 && dx < 1.05 && dy < 1.35) {
+                    this.runCoins += coinValue;
+                    this.score += 25;
+                    State.data.stats.lifetimeRunCoins += coinValue;
+                    State.data.dailyChallenges.coinsRun += coinValue;
+                    Sound.play('coin');
+                    this.scene.remove(c.mesh);
+                    this.coins.splice(i, 1);
+                    continue;
+                }
+
+                if (c.mesh.position.z > 14) {
+                    this.scene.remove(c.mesh);
+                    this.coins.splice(i, 1);
+                }
+            }
+
+            // Update & Check Powerups
+            for (let i = this.powerups.length - 1; i >= 0; i--) {
+                const p = this.powerups[i];
+                p.mesh.position.z += stepZ;
+                p.mesh.rotation.y += dt * 3;
+
+                if (Math.abs(p.mesh.position.z) < 1.2 && Math.abs(p.mesh.position.x - pX) < 1.1) {
+                    Sound.play('powerup');
+                    if (p.type === 'shield') {
+                        this.hasShield = true;
+                        this.shieldMesh.visible = true;
+                        UI.toast('🛡️ Shield Activated!', 'info');
+                    } else {
+                        this.magnetTimer = 10;
+                        UI.toast('🧲 Coin Magnet Activated (10s)!', 'info');
+                    }
+                    this.scene.remove(p.mesh);
+                    this.powerups.splice(i, 1);
+                    continue;
+                }
+
+                if (p.mesh.position.z > 14) {
+                    this.scene.remove(p.mesh);
+                    this.powerups.splice(i, 1);
+                }
+            }
+
+            // Camera subtle follow & impact shake
+            let camX = this.playerGroup.position.x * 0.42;
+            let camY = 5.2 + this.playerY * 0.35;
+            if (this.shakeTimer > 0) {
+                this.shakeTimer -= dt;
+                camX += (Math.random() - 0.5) * 0.45;
+                camY += (Math.random() - 0.5) * 0.45;
+            }
+            this.camera.position.set(camX, camY, 8.8);
+            this.camera.lookAt(this.playerGroup.position.x * 0.25, 1.5, -8);
+
+            this.updateHUD();
+
+            // Check Level Goal Completion!
+            if (this.distance >= this.targetDistance) {
+                this.handleLevelWin();
+                return;
+            }
+
+            this.renderer.render(this.scene, this.camera);
+        },
+
+        animatePlayerLimbs(dt, activeRun) {
+            if (!this.limbs.leftLeg) return;
+            const swing = Math.sin(this.runCycle) * (activeRun ? 0.75 : 0.45);
+            this.limbs.leftLeg.rotation.x = swing;
+            this.limbs.rightLeg.rotation.x = -swing;
+            this.limbs.leftArm.rotation.x = -swing * 0.8;
+            this.limbs.rightArm.rotation.x = swing * 0.8;
+
+            // Spin soccer ball at feet
+            if (this.ballMesh) {
+                this.ballMesh.rotation.x -= dt * (activeRun ? 14 : 6);
+                this.ballMesh.position.x = Math.sin(this.runCycle * 0.5) * 0.18;
+            }
+            if (this.shieldMesh && this.shieldMesh.visible) {
+                this.shieldMesh.rotation.y += dt * 1.5;
+            }
+        }
+    };
+
+    /* -------------------------------------------------------------------------
+       5. UI & INTERACTIVE SCREENS CONTROLLER
+    ------------------------------------------------------------------------- */
+    const UI = {
+        activeEnvFilter: 'all',
+
+        init() {
+            this.populateEnvDropdown();
+            this.renderAgeModes();
+            this.renderAvatarPicker();
+            this.refreshAll();
+
+            if (!State.data.tutorialSeen) {
+                this.openModal('tutorial-modal');
+            }
+        },
+
+        toast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            const colors = type === 'error'
+                ? 'bg-rose-600/95 border-rose-400 text-white'
+                : (type === 'info' ? 'bg-sky-600/95 border-sky-400 text-white' : 'bg-emerald-600/95 border-emerald-400 text-white');
+            el.className = `px-4 py-2.5 rounded-2xl border shadow-xl font-bold text-xs sm:text-sm ${colors} animate-pop text-center`;
+            el.textContent = message;
+            container.appendChild(el);
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => el.remove(), 300);
+            }, 2400);
+        },
+
+        navigate(screenName) {
+            ['home', 'map', 'shop', 'rewards'].forEach(id => {
+                const sec = document.getElementById(`screen-${id}`);
+                if (sec) sec.classList.toggle('hidden', id !== screenName);
+            });
+
+            document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+                const active = btn.dataset.tab === screenName;
+                btn.className = active
+                    ? 'nav-tab-btn px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'nav-tab-btn px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition flex items-center gap-1';
+            });
+
+            if (screenName === 'map') this.renderLevelMap();
+            if (screenName === 'shop') this.renderShop();
+            if (screenName === 'rewards') this.renderRewards();
+        },
+
+        openModal(modalId) {
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            ['pause-modal', 'win-modal', 'gameover-modal', 'profile-modal', 'settings-modal', 'tutorial-modal'].forEach(id => {
+                document.getElementById(id).classList.toggle('hidden', id !== modalId);
+            });
+
+            if (modalId === 'profile-modal') {
+                document.getElementById('profile-nickname-input').value = State.data.nickname;
+                document.getElementById('prof-stat-coins').textContent = State.data.coins;
+                document.getElementById('prof-stat-levels').textContent = `${State.data.stats.totalLevelsCleared}/400`;
+                document.getElementById('prof-stat-best').textContent = State.getModeData().bestScore;
+            }
+        },
+
+        closeModals() {
+            document.getElementById('modal-backdrop').classList.add('hidden');
+        },
+
+        completeTutorial() {
+            State.data.tutorialSeen = true;
+            State.save();
+            this.closeModals();
+        },
+
+        refreshAll() {
+            this.updateHeader();
+            this.updateLobby();
+            this.renderAgeModes();
+            this.checkAchievements(true);
+        },
+
+        updateHeader() {
+            const ageCfg = AGE_MODES[State.data.activeAge];
+            const modeData = State.getModeData();
+            document.body.className = ageCfg.themeClass;
+
+            document.getElementById('header-age-label').textContent = `${ageCfg.name} (${ageCfg.ages})`;
+            document.getElementById('header-nickname').textContent = State.data.nickname;
+            document.getElementById('header-avatar').textContent = State.data.avatar;
+            document.getElementById('header-best-score').textContent = modeData.bestScore;
+            document.getElementById('header-coins').textContent = State.data.coins;
+
+            // Daily button state
+            const today = new Date().toISOString().slice(0, 10);
+            const claimedToday = State.data.lastDailyClaim === today;
+            const dailyBtn = document.getElementById('daily-btn');
+            dailyBtn.classList.toggle('opacity-60', claimedToday);
+        },
+
+        updateLobby() {
+            const curLvl = State.getCurrentLevel();
+            const envIdx = Math.min(9, Math.floor((curLvl - 1) / 10));
+            const env = ENVIRONMENTS[envIdx];
+            const modeData = State.getModeData();
+            const clearedCount = Object.keys(modeData.completedLevels).length;
+            const char = State.getEquippedCharacter();
+
+            document.getElementById('lobby-stadium-badge').textContent = `${env.icon} ${env.name}`;
+            document.getElementById('lobby-level-badge').textContent = `Level ${curLvl} / 100`;
+            document.getElementById('play-btn-lvl').textContent = curLvl;
+            document.getElementById('lobby-trophy-status').textContent = modeData.trophy ? '🏆 CHAMPION!' : `🏆 ${clearedCount}/100 Cleared`;
+            document.getElementById('lobby-progress-bar').style.width = `${Math.max(2, clearedCount)}%`;
+            document.getElementById('lobby-equipped-name').textContent = `${char.icon} ${char.name}`;
+
+            // Next milestone
+            const milestones = [10, 20, 30, 50, 75, 100];
+            const nextM = milestones.find(m => m >= curLvl) || 100;
+            document.getElementById('lobby-next-milestone').textContent = `Lvl ${nextM} (+${MILESTONE_REWARDS[nextM]} 🪙)`;
+
+            document.getElementById('lobby-arena-preview').value = envIdx;
+            if (!Game.isPlaying) {
+                Game.applyEnvironment(envIdx);
+            }
+        },
+
+        populateEnvDropdown() {
+            const sel = document.getElementById('lobby-arena-preview');
+            sel.innerHTML = ENVIRONMENTS.map(e => `<option value="${e.id}">${e.icon} ${e.name}</option>`).join('');
+        },
+
+        renderAgeModes() {
+            const grid = document.getElementById('age-modes-grid');
+            grid.innerHTML = Object.values(AGE_MODES).map(mode => {
+                const isSelected = State.data.activeAge === mode.id;
+                const mData = State.data.modes[mode.id];
+                const cleared = Object.keys(mData.completedLevels).length;
+
+                return `
+                <button onclick="UI.selectAgeMode('${mode.id}')" class="text-left p-4 rounded-2xl border transition cursor-pointer flex flex-col justify-between ${isSelected ? 'bg-slate-800/95 border-emerald-400 ring-2 ring-emerald-400/40' : 'glass-card border-white/10'}">
+                    <div>
+                        <div class="flex items-center justify-between gap-1">
+                            <span class="text-2xl">${mode.icon}</span>
+                            <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${mode.badgeColor}">${mode.ages}</span>
+                        </div>
+                        <div class="font-black text-base text-white mt-2 flex items-center gap-1.5">
+                            <span>${mode.name}</span>
+                            ${mData.trophy ? '<span title="Champion Trophy Earned!">🏆</span>' : ''}
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1 line-clamp-2">${mode.desc}</p>
+                    </div>
+                    <div class="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[11px] font-bold">
+                        <span class="text-emerald-400">Lvl ${mData.unlockedLevel}/100</span>
+                        <span class="text-slate-300">${cleared} Cleared</span>
+                    </div>
+                </button>`;
+            }).join('');
+        },
+
+        selectAgeMode(modeId) {
+            State.data.activeAge = modeId;
+            State.save();
+            Sound.play('lane');
+            this.refreshAll();
+            this.toast(`Switched to ${AGE_MODES[modeId].name}!`, 'info');
+        },
+
+        renderLevelMap() {
+            const ageCfg = AGE_MODES[State.data.activeAge];
+            const modeData = State.getModeData();
+            document.getElementById('map-age-title').textContent = `${ageCfg.name} (${ageCfg.ages})`;
+
+            const trophyPill = document.getElementById('champion-trophy-pill');
+            if (modeData.trophy) {
+                trophyPill.className = 'px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-400 text-xs font-extrabold text-amber-300 flex items-center gap-1.5';
+                trophyPill.innerHTML = '<span>🏆</span><span>CHAMPION TROPHY UNLOCKED!</span>';
+            } else {
+                trophyPill.className = 'px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/10 text-xs font-bold text-slate-400 flex items-center gap-1.5';
+                trophyPill.innerHTML = '<span>🏆</span><span>Beat Lvl 100 for Champion Trophy</span>';
+            }
+
+            // Environment filter pills
+            const filterBar = document.getElementById('env-filter-bar');
+            filterBar.innerHTML = `<button onclick="UI.setEnvFilter('all')" class="px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap border ${this.activeEnvFilter === 'all' ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-slate-900/70 text-slate-300 border-white/10'}">All 100</button>` +
+                ENVIRONMENTS.map(e => `
+                    <button onclick="UI.setEnvFilter(${e.id})" class="px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap border ${this.activeEnvFilter === e.id ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-slate-900/70 text-slate-300 border-white/10'}">
+                        ${e.icon} ${e.levels}
+                    </button>
+                `).join('');
+
+            // Render 100 level tiles
+            const grid = document.getElementById('levels-grid');
+            let html = '';
+            for (let lvl = 1; lvl <= 100; lvl++) {
+                const envIdx = Math.floor((lvl - 1) / 10);
+                if (this.activeEnvFilter !== 'all' && this.activeEnvFilter !== envIdx) continue;
+
+                const isUnlocked = lvl <= modeData.unlockedLevel;
+                const isCompleted = !!modeData.completedLevels[lvl];
+                const isMilestone = !!MILESTONE_REWARDS[lvl];
+                const env = ENVIRONMENTS[envIdx];
+
+                let cardStyle = 'bg-slate-900/60 border-white/5 text-slate-500 cursor-not-allowed opacity-60';
+                if (isCompleted) {
+                    cardStyle = 'bg-emerald-900/50 border-emerald-400/50 text-white hover:scale-105 cursor-pointer';
+                } else if (isUnlocked) {
+                    cardStyle = 'bg-amber-500/25 border-amber-400 text-white ring-2 ring-amber-400/40 hover:scale-105 cursor-pointer';
+                }
+
+                html += `
+                <button ${isUnlocked ? `onclick="Game.startLevel(${lvl})"` : ''} class="relative p-2.5 rounded-2xl border flex flex-col items-center justify-center transition ${cardStyle}">
+                    ${isMilestone ? `<span class="absolute -top-1.5 -right-1.5 text-[10px] px-1.5 py-0.2 rounded-full bg-amber-400 text-slate-950 font-black shadow">🎁</span>` : ''}
+                    <span class="text-[11px] opacity-80">${env.icon}</span>
+                    <span class="font-sport font-black text-base sm:text-lg leading-tight">${lvl}</span>
+                    <span class="text-[10px] mt-0.5">${isCompleted ? '⭐' : (isUnlocked ? '▶' : '🔒')}</span>
+                </button>`;
+            }
+            grid.innerHTML = html;
+        },
+
+        setEnvFilter(val) {
+            this.activeEnvFilter = val;
+            this.renderLevelMap();
+        },
+
+        renderShop() {
+            const grid = document.getElementById('shop-grid');
+            grid.innerHTML = CHARACTERS.map(char => {
+                const unlocked = State.data.unlockedChars.includes(char.id);
+                const equipped = State.data.equippedChar === char.id;
+                const jerseyHex = '#' + char.jersey.toString(16).padStart(6, '0');
+
+                let actionBtn = '';
+                if (equipped) {
+                    actionBtn = `<button disabled class="w-full py-2.5 rounded-xl bg-emerald-500/25 border border-emerald-400/50 text-emerald-300 font-extrabold text-xs">✓ EQUIPPED</button>`;
+                } else if (unlocked) {
+                    actionBtn = `<button onclick="UI.equipCharacter('${char.id}')" class="btn-glow-blue w-full py-2.5 rounded-xl font-extrabold text-xs text-white cursor-pointer">EQUIP PLAYER</button>`;
+                } else {
+                    actionBtn = `<button onclick="UI.buyCharacter('${char.id}')" class="btn-glow-gold w-full py-2.5 rounded-xl font-extrabold text-xs text-slate-950 cursor-pointer">UNLOCK • ${char.price} 🪙</button>`;
+                }
+
+                return `
+                <div class="glass-card rounded-2xl p-4 flex flex-col justify-between gap-3 ${equipped ? 'border-emerald-400/60' : ''}">
+                    <div class="flex items-center gap-3">
+                        <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-lg border border-white/20" style="background: ${jerseyHex};">
+                            ${char.icon}
+                        </div>
+                        <div>
+                            <div class="font-black text-base text-white">${char.name}</div>
+                            <div class="text-xs text-slate-400">${char.role}</div>
+                            <div class="inline-block mt-1 px-2 py-0.5 rounded-md bg-white/10 text-[11px] font-bold text-amber-300">
+                                ✨ ${char.perk}
+                            </div>
+                        </div>
+                    </div>
+                    ${actionBtn}
+                </div>`;
+            }).join('');
+        },
+
+        buyCharacter(charId) {
+            const char = CHARACTERS.find(c => c.id === charId);
+            if (!char || State.data.unlockedChars.includes(charId)) return;
+
+            if (State.data.coins < char.price) {
+                Sound.play('hit');
+                this.toast(`Need ${char.price - State.data.coins} more coins!`, 'error');
+                return;
+            }
+
+            State.data.coins -= char.price;
+            State.data.unlockedChars.push(charId);
+            State.data.equippedChar = charId;
+            State.save();
+            Sound.play('win');
+            Game.buildPlayer();
+            this.refreshAll();
+            this.renderShop();
+            this.toast(`Unlocked & Equipped ${char.name}! 🎉`);
+        },
+
+        equipCharacter(charId) {
+            if (!State.data.unlockedChars.includes(charId)) return;
+            State.data.equippedChar = charId;
+            State.save();
+            Sound.play('lane');
+            Game.buildPlayer();
+            this.refreshAll();
+            this.renderShop();
+            this.toast('Player equipped for next match!');
+        },
+
+        openDailyReward() {
+            const today = new Date().toISOString().slice(0, 10);
+            if (State.data.lastDailyClaim === today) {
+                this.toast('Daily gift already claimed today! Come back tomorrow 🎁', 'info');
+                return;
+            }
+            State.data.lastDailyClaim = today;
+            State.data.dailyStreak++;
+            const reward = 150 + Math.min(350, State.data.dailyStreak * 25);
+            State.addCoins(reward);
+            Sound.play('win');
+            this.toast(`🎁 Daily Login Bonus: +${reward} Coins! (Streak: ${State.data.dailyStreak}d)`);
+        },
+
+        renderRewards() {
+            const dc = State.data.dailyChallenges;
+            const challenges = [
+                { key: 'c1', title: 'Coin Collector', desc: 'Collect 50 coins on the pitch today', cur: dc.coinsRun, goal: 50, reward: 120 },
+                { key: 'c2', title: 'Hurdle Jumper', desc: 'Jump 15 times during matches today', cur: dc.jumpsRun, goal: 15, reward: 100 },
+                { key: 'c3', title: 'Match Winner', desc: 'Complete 2 stadium levels today', cur: dc.levelsWon, goal: 2, reward: 200 }
+            ];
+
+            document.getElementById('daily-challenges-list').innerHTML = challenges.map(c => {
+                const done = c.cur >= c.goal;
+                const claimed = dc.claimed[c.key];
+                const pct = Math.min(100, (c.cur / c.goal) * 100);
+
+                return `
+                <div class="bg-slate-900/75 rounded-xl p-3 border border-white/10 flex items-center justify-between gap-3">
+                    <div class="flex-1">
+                        <div class="font-bold text-sm text-white">${c.title}</div>
+                        <div class="text-xs text-slate-400">${c.desc}</div>
+                        <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden mt-1.5">
+                            <div class="h-full bg-amber-400" style="width: ${pct}%"></div>
+                        </div>
+                        <div class="text-[10px] text-slate-400 mt-1">${Math.min(c.cur, c.goal)} / ${c.goal}</div>
+                    </div>
+                    <div>
+                        ${claimed
+                            ? `<span class="px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-bold">✓ Claimed</span>`
+                            : (done
+                                ? `<button onclick="UI.claimDailyChallenge('${c.key}', ${c.reward})" class="btn-glow-gold px-3 py-2 rounded-xl text-xs font-black text-slate-950 cursor-pointer">+${c.reward} 🪙</button>`
+                                : `<span class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 text-xs font-bold">${c.reward} 🪙</span>`)
+                        }
+                    </div>
+                </div>`;
+            }).join('');
+
+            // Render Career Achievements
+            let unlockedCount = 0;
+            document.getElementById('achievements-list').innerHTML = ACHIEVEMENTS_DEF.map(ach => {
+                const isDone = ach.check(State.data.stats);
+                const isClaimed = State.data.claimedAchievements.includes(ach.id);
+                if (isDone) unlockedCount++;
+
+                return `
+                <div class="bg-slate-900/75 rounded-xl p-3 border ${isDone ? 'border-emerald-500/40' : 'border-white/10'} flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <span class="text-2xl">${ach.icon}</span>
+                        <div>
+                            <div class="font-bold text-sm text-white">${ach.title}</div>
+                            <div class="text-xs text-slate-400">${ach.desc}</div>
+                        </div>
+                    </div>
+                    <div>
+                        ${isClaimed
+                            ? `<span class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-bold">✓ Done</span>`
+                            : (isDone
+                                ? `<button onclick="UI.claimAchievement('${ach.id}', ${ach.reward})" class="btn-glow-green px-3 py-1.5 rounded-xl text-xs font-black text-white cursor-pointer">Claim +${ach.reward} 🪙</button>`
+                                : `<span class="text-xs font-bold text-slate-500">🔒 ${ach.reward} 🪙</span>`)
+                        }
+                    </div>
+                </div>`;
+            }).join('');
+
+            document.getElementById('achievements-count').textContent = `${unlockedCount}/${ACHIEVEMENTS_DEF.length} Unlocked`;
+        },
+
+        claimDailyChallenge(key, reward) {
+            if (State.data.dailyChallenges.claimed[key]) return;
+            State.data.dailyChallenges.claimed[key] = true;
+            State.addCoins(reward);
+            Sound.play('win');
+            this.renderRewards();
+            this.toast(`Challenge Reward: +${reward} Coins! ⚡`);
+        },
+
+        claimAchievement(id, reward) {
+            if (State.data.claimedAchievements.includes(id)) return;
+            State.data.claimedAchievements.push(id);
+            State.addCoins(reward);
+            Sound.play('win');
+            this.renderRewards();
+            this.checkAchievements(true);
+            this.toast(`Achievement Unlocked: +${reward} Coins! 🎖️`);
+        },
+
+        checkAchievements(silent = false) {
+            const hasUnclaimed = ACHIEVEMENTS_DEF.some(a => a.check(State.data.stats) && !State.data.claimedAchievements.includes(a.id));
+            document.getElementById('reward-dot').classList.toggle('hidden', !hasUnclaimed);
+            if (hasUnclaimed && !silent) {
+                this.toast('🎖️ New Achievement Reward ready in Rewards tab!', 'info');
+            }
+        },
+
+        renderAvatarPicker() {
+            const container = document.getElementById('avatar-picker');
+            container.innerHTML = AVATARS.map(av => `
+                <button type="button" onclick="UI.selectAvatar('${av}')" class="avatar-opt p-2 rounded-xl bg-slate-800 hover:bg-slate-700 border ${State.data.avatar === av ? 'border-emerald-400 bg-emerald-500/20' : 'border-white/10'} text-xl">
+                    ${av}
+                </button>
+            `).join('');
+        },
+
+        selectAvatar(av) {
+            State.data.avatar = av;
+            this.renderAvatarPicker();
+        },
+
+        saveProfile() {
+            const input = document.getElementById('profile-nickname-input').value.trim();
+            if (input.length > 0) {
+                State.data.nickname = input;
+            }
+            State.save();
+            this.refreshAll();
+            this.closeModals();
+            this.toast('Player profile updated! 🪪');
+        }
+    };
+
+    const Settings = {
+        toggleSound() {
+            State.data.settings.sound = !State.data.settings.sound;
+            State.save();
+            const btn = document.getElementById('toggle-sound-btn');
+            btn.textContent = State.data.settings.sound ? 'ON' : 'OFF';
+            btn.className = `px-4 py-1.5 rounded-xl font-bold text-xs ${State.data.settings.sound ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-300'}`;
+            if (State.data.settings.sound) Sound.play('coin');
+        },
+        toggleGraphics() {
+            State.data.settings.highGraphics = !State.data.settings.highGraphics;
+            State.save();
+            const btn = document.getElementById('toggle-gfx-btn');
+            btn.textContent = State.data.settings.highGraphics ? 'HIGH' : 'LOW';
+            btn.className = `px-4 py-1.5 rounded-xl font-bold text-xs ${State.data.settings.highGraphics ? 'bg-blue-500 text-white' : 'bg-slate-700 text-slate-300'}`;
+            if (Game.renderer) {
+                Game.renderer.shadowMap.enabled = State.data.settings.highGraphics;
+                Game.applyEnvironment(Game.currentEnvIndex);
+            }
+        }
+    };
+
+    /* -------------------------------------------------------------------------
+       6. BOOTSTRAP APPLICATION ON WINDOW LOAD
+    ------------------------------------------------------------------------- */
+    window.onload = function () {
+        State.load();
+        Game.init();
+        UI.init();
+    };
+    </script>
+</body>
+</html>
